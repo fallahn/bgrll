@@ -26,6 +26,21 @@ source distribution.
 
 #include <memory>
 #include <vector>
+#include <array>
+
+#ifdef _WIN32
+#include <Windows.h>
+#define WIN32_LEAN_AND_MEAN
+#elif defined __LINUX__
+#include <cstdio>
+#include <termios.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#endif
 
 using byte = unsigned char;
 
@@ -105,12 +120,14 @@ private:
 
     };
 
+
 #ifdef _WIN32
+
     class WinSconnImpl final : public SconnImpl
     {
     public:
-        WinSconnImpl();
-        virtual ~WinSconnImpl();
+        WinSconnImpl() = default;
+        ~WinSconnImpl();
 
         bool openPort(std::uint16_t port, std::uint32_t baud) override;
         void closePort(std::uint16_t port) override;
@@ -122,13 +139,18 @@ private:
         bool sendByteArray(std::uint16_t port, const std::vector<byte>& data) override;
 
     private:
+
+        std::array<HANDLE, 16> m_comportHandles;
+        DCB m_portSettings;
+        COMMTIMEOUTS m_commTimeouts;
+        std::array<byte, 64> m_baudrate;
     };
 #elif defined __LINUX__
     class LinSconnImpl final : public SconnImpl
     {
     public:
-        LinSconnImpl();
-        virtual ~LinSconnImpl();
+        LinSconnImpl() = default;
+        ~LinSconnImpl() = default;
 
         bool openPort(std::uint16_t port, std::uint32_t baud) override;
         void closePort(std::uint16_t port) override;
@@ -140,6 +162,11 @@ private:
         bool sendByteArray(std::uint16_t port, const std::vector<byte>& data) override;
 
     private:
+
+        std::array<int, 30> m_comportHandles;
+        int m_error;
+        termios m_newPortSettings;
+        std::array<termios, 30> m_oldPortSettings;
     };
 #endif //_WIN32
     std::unique_ptr<SconnImpl> m_impl;

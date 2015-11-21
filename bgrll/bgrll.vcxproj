@@ -129,7 +129,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\LinSconnImpl.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\WinSconnImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\SerialConn.hpp" />
