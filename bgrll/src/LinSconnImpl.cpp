@@ -25,7 +25,7 @@ source distribution.
 
 namespace
 {
-    const char comPorts[30][16] = 
+    const char commPorts[30][16] = 
     { 
         "/dev/ttyS0","/dev/ttyS1","/dev/ttyS2","/dev/ttyS3","/dev/ttyS4","/dev/ttyS5",
         "/dev/ttyS6","/dev/ttyS7","/dev/ttyS8","/dev/ttyS9","/dev/ttyS10","/dev/ttyS11",
@@ -35,6 +35,13 @@ namespace
         "/dev/rfcomm0","/dev/rfcomm1","/dev/ircomm0","/dev/ircomm1"
     };
 
+}
+
+SerialConnection::LinSconnImpl::LinSconnImpl()
+    : m_error(0),
+    m_newPortSettings()
+{
+    //TODO init arrays to default value
 }
 
 bool SerialConnection::LinSconnImpl::openPort(std::uint16_t port, std::uint32_t baud)
@@ -52,9 +59,9 @@ bool SerialConnection::LinSconnImpl::readByte(std::uint16_t port, byte& dst)
     return false;
 }
 
-bool SerialConnection::LinSconnImpl::readByteArray(std::uint16_t port, byte* dst, std::size_t count)
+std::size_t SerialConnection::LinSconnImpl::readByteArray(std::uint16_t port, std::vector<byte>& dst)
 {
-    return false;
+    return 0;
 }
 
 bool SerialConnection::LinSconnImpl::sendByte(std::uint16_t port, byte data)
@@ -62,8 +69,8 @@ bool SerialConnection::LinSconnImpl::sendByte(std::uint16_t port, byte data)
     return false;
 }
 
-bool SerialConnection::LinSconnImpl::sendByteArray(std::uint16_t port, const std::vector<byte>& data)
+std::size_t SerialConnection::LinSconnImpl::sendByteArray(std::uint16_t port, const std::vector<byte>& data)
 {
-    return false;
+    return 0;
 }
 #endif //__LINUX__

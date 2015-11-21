@@ -27,6 +27,7 @@ source distribution.
 #include <memory>
 #include <vector>
 #include <array>
+#include <string>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -79,11 +80,11 @@ public:
          return m_impl->readByte(port, dst);
     }
 
-    //attempts to read an array of bytes into dst, up to count bytes
-    //returns true if successful. this function is *blocking*
-    bool readByteArray(std::uint16_t port, byte* dst, std::size_t count)
+    //attempts to read an array of bytes into dst, up to current size
+    //returns actual number of bytes read. function is *blocking*
+    std::size_t readByteArray(std::uint16_t port, std::vector<byte>& dst)
     {
-        return m_impl->readByteArray(port, dst, count);
+        return m_impl->readByteArray(port, dst);
     }
 
     //attempt to send byte of data on given port if it is open
@@ -94,8 +95,8 @@ public:
     }
 
     //attempts to send the given array of data via the port if it is
-    //open. returns true on success, else false. this function is *blocking*
-    bool sendByteArray(std::uint16_t port, const std::vector<byte>& data)
+    //open. returns number of bytes successfully sent. this function is *blocking*
+    std::size_t sendByteArray(std::uint16_t port, const std::vector<byte>& data)
     {
         return m_impl->sendByteArray(port, data);
     }
@@ -111,10 +112,10 @@ private:
         virtual void closePort(std::uint16_t port) = 0;
 
         virtual bool readByte(std::uint16_t port, byte& dst) = 0;
-        virtual bool readByteArray(std::uint16_t port, byte* dst, std::size_t count) = 0;
+        virtual std::size_t readByteArray(std::uint16_t port, std::vector<byte>& dst) = 0;
 
         virtual bool sendByte(std::uint16_t port, byte data) = 0;
-        virtual bool sendByteArray(std::uint16_t port, const std::vector<byte>& data) = 0;
+        virtual std::size_t sendByteArray(std::uint16_t port, const std::vector<byte>& data) = 0;
 
     private:
 
@@ -126,44 +127,44 @@ private:
     class WinSconnImpl final : public SconnImpl
     {
     public:
-        WinSconnImpl() = default;
+        WinSconnImpl();
         ~WinSconnImpl();
 
         bool openPort(std::uint16_t port, std::uint32_t baud) override;
         void closePort(std::uint16_t port) override;
 
         bool readByte(std::uint16_t port, byte& dst) override;
-        bool readByteArray(std::uint16_t port, byte* dst, std::size_t count)override;
+        std::size_t readByteArray(std::uint16_t port, std::vector<byte>& dst)override;
 
         bool sendByte(std::uint16_t port, byte data) override;
-        bool sendByteArray(std::uint16_t port, const std::vector<byte>& data) override;
+        std::size_t sendByteArray(std::uint16_t port, const std::vector<byte>& data) override;
 
     private:
 
-        std::array<HANDLE, 16> m_comportHandles;
+        std::array<HANDLE, 16> m_commPortHandles;
         DCB m_portSettings;
         COMMTIMEOUTS m_commTimeouts;
-        std::array<byte, 64> m_baudrate;
+        std::string m_baudrate;
     };
 #elif defined __LINUX__
     class LinSconnImpl final : public SconnImpl
     {
     public:
-        LinSconnImpl() = default;
+        LinSconnImpl();
         ~LinSconnImpl() = default;
 
         bool openPort(std::uint16_t port, std::uint32_t baud) override;
         void closePort(std::uint16_t port) override;
 
         bool readByte(std::uint16_t port, byte& dst) override;
-        bool readByteArray(std::uint16_t port, byte* dst, std::size_t count)override;
+        std::size_t readByteArray(std::uint16_t port, std::vector<byte>& dst)override;
 
         bool sendByte(std::uint16_t port, byte data) override;
-        bool sendByteArray(std::uint16_t port, const std::vector<byte>& data) override;
+        std::size_t sendByteArray(std::uint16_t port, const std::vector<byte>& data) override;
 
     private:
 
-        std::array<int, 30> m_comportHandles;
+        std::array<int, 30> m_commPortHandles;
         int m_error;
         termios m_newPortSettings;
         std::array<termios, 30> m_oldPortSettings;
