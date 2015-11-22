@@ -23,6 +23,9 @@ source distribution.
 
 #include <SerialConn.hpp>
 
+#include <iostream>
+#include <cassert>
+
 namespace
 {
     const char commPorts[30][16] = 
@@ -34,43 +37,225 @@ namespace
         "/dev/ttyAMA0","/dev/ttyAMA1","/dev/ttyACM0","/dev/ttyACM1",
         "/dev/rfcomm0","/dev/rfcomm1","/dev/ircomm0","/dev/ircomm1"
     };
-
+    const std::size_t MAX_ARRAY_SIZE = 4096;
 }
 
 SerialConnection::LinSconnImpl::LinSconnImpl()
-    : m_error(0),
-    m_newPortSettings()
+    : m_error(0)
 {
-    //TODO init arrays to default value
+    //init arrays to default value
+    for (auto& c : m_commPortHandles) c = -1;
+
 }
 
 bool SerialConnection::LinSconnImpl::openPort(std::uint16_t port, std::uint32_t baud)
 {
-    return false;
+    int baudrate = 0;
+
+    assert(port < 30);
+
+    //set baudrate
+    switch (baud)
+    {
+    case 50:
+        baudrate = B50;
+        break;
+    case 75:
+        baudrate = B75;
+        break;
+    case 110:
+        baudrate = B110;
+        break;
+    case 134:
+        baudrate = B134;
+        break;
+    case 150:
+        baudrate = B150;
+        break;
+    case 200:
+        baudrate = B200;
+        break;
+    case 300:
+        baudrate = B300;
+        break;
+    case 600:
+        baudrate = B600;
+        break;
+    case 1200:
+        baudrate = B1200;
+        break;
+    case 1800:
+        baudrate = B1800;
+        break;
+    case 2400:
+        baudrate = B2400;
+        break;
+    case 4800:
+        baudrate = B4800;
+        break;
+    case 9600:
+        baudrate = B9600;
+        break;
+    case 19200:
+        baudrate = B19200;
+        break;
+    case 38400:
+        baudrate = B38400;
+        break;
+    case 57600:
+        baudrate = B57600;
+        break;
+    case 115200:
+        baudrate = B115200;
+        break;
+    case 230400:
+        baudrate = B230400;
+        break;
+    case 460800:
+        baudrate = B460800;
+        break;
+    case 500000:
+        baudrate = B500000;
+        break;
+    case 576000:
+        baudrate = B576000;
+        break;
+    case 921600:
+        baudrate = B921600;
+        break;
+    case 1000000:
+        baudrate = B1000000;
+        break;
+    default: std::cerr << baud << ": Invalid baudrate." << std::endl;
+        return false;
+    }
+
+    //attempt to open port
+    m_commPortHandles[port] = open(commPorts[port], O_RDWR | O_NOCTTY | O_NDELAY);
+    if (m_commPortHandles[port] == -1)
+    {
+        perror("SerConn::OpenPort: Unable to open port");
+        return false;
+    }
+    //apply port settings
+    error = tcgetattr(m_commPortHandles[port], m_oldPortSettings + port);
+    if (error == -1)
+    {
+        close(m_commPortHandles[port]);
+        perror("SerConn::OpenPort: Unable to read port settings");
+        return false;
+    }
+    //clear and set port settings struct
+    memset(&m_newPortSettings, 0, sizeof(m_newPortSettings));
+    m_newPortSettings.c_cflag = baudrate | CS8 | CLOCAL | CREAD;
+    m_newPortSettings.c_iflag = IGNPAR;
+    m_newPortSettings.c_oflag = 0;
+    m_newPortSettings.c_lflag = 0;
+    m_newPortSettings.c_cc[VMIN] = 0; //block until n bytes rcd
+    m_newPortSettings.c_cc[VTIME] = 0; //block until timer expires
+
+    error = tcsetattr(m_commPortHandles[port], TCSANOW, &m_newPortSettings);
+    if (error == -1)
+    {
+        close(m_commPortHandles[port]);
+        perror("SerConn::OpenPort: Unable to apply port settings");
+        return false;
+    }
+
+    //check port status
+    int status = 0;
+    if (ioctl(m_commPortHandles[port], TIOCMGET, &status) == -1)
+    {
+        perror("SerConn::OpenPort: Unable to get port status");
+        return false;
+    }
+    //enable dtr and rts
+    status |= TIOCM_DTR;
+    status |= TIOCM_RTS;
+    //update port status
+    if (ioctl(m_comPortHandles[port], TIOCMSET, &status) == -1)
+    {
+        perror("SerConn::OpenPort: Unable to update port status");
+        return false;
+    }
+    return true;
 }
 
 void SerialConnection::LinSconnImpl::closePort(std::uint16_t port)
 {
+    int status = 0;
+    if (ioctl(m_commPortHandles[port], TIOCMGET, &status) == -1)
+    {
+        perror("SerConn::ClosePort: Unable to get port status");
+    }
+    //turn off DTR and RTS
+    status &= ~TIOCM_DTR;
+    status &= ~TIOCM_RTS;
 
+    if (ioctl(m_commPortHandles[port], TIOCMSET, &status) == -1)
+    {
+        perror("SerConn::ClosePort: Unable to set port status");
+    }
+
+    close(m_commPortHandles[port]);
+    tcsetattr(m_commPortHandles[port], TCSANOW, m_oldPortSettings + port);
 }
 
 bool SerialConnection::LinSconnImpl::readByte(std::uint16_t port, byte& dst)
 {
-    return false;
+    if (m_commPortHandles[port] == -1)
+    {
+        perror("SerConn::ReadByte: Invalid port specified");
+        return false;
+    }
+
+    read(m_commPortHandles[port], &dst, 1);
+    return true;
 }
 
 std::size_t SerialConnection::LinSconnImpl::readByteArray(std::uint16_t port, std::vector<byte>& dst)
 {
-    return 0;
+    if (m_commPortHandles[port] == -1)
+    {
+        perror("SerConn::ReadByteArray: Invalid port specified");
+        return false;
+    }
+
+#ifndef __STRICT_ANSI__ //-ansi flag in GCC
+    assert(dst.size() < SSIZE_MAX);
+#else
+    assert(dst.size() < MAX_ARRAY_SIZE);
+#endif //__STRICT_ANSI__
+
+    auto readCount = read(m_commPortHandles[port], dst.data(), dst.size());
+    if (dst.size() > readCount) dst.resize(readCount);
+    return readCount;
 }
 
 bool SerialConnection::LinSconnImpl::sendByte(std::uint16_t port, byte data)
 {
-    return false;
+    if (m_commPortHandles[port] == -1)
+    {
+        perror("SerConn::SendByte: Invalid port specified");
+        return -1;
+    }
+    int n = write(m_commPortHandles[port], &data, 1);
+    return (n >= 0);
 }
 
 std::size_t SerialConnection::LinSconnImpl::sendByteArray(std::uint16_t port, const std::vector<byte>& data)
 {
-    return 0;
+#ifndef __STRICT_ANSI__ //-ansi flag in GCC
+    assert(data.size() < SSIZE_MAX);
+#else
+    assert(data.size() < MAX_ARRAY_SIZE);
+#endif //__STRICT_ANSI__
+
+    if (m_commPortHandles[port] == -1)
+    {
+        perror("SerConn::SendByteArray: Invalid port specified");
+        return 0;
+    }
+    return write(m_commPortHandles[port], data.data(), data.size());
 }
 #endif //__LINUX__
