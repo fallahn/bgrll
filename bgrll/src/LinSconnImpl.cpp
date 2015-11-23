@@ -28,7 +28,7 @@ source distribution.
 
 namespace
 {
-    const char commPorts[30][16] = 
+    const char comPorts[30][16] = 
     { 
         "/dev/ttyS0","/dev/ttyS1","/dev/ttyS2","/dev/ttyS3","/dev/ttyS4","/dev/ttyS5",
         "/dev/ttyS6","/dev/ttyS7","/dev/ttyS8","/dev/ttyS9","/dev/ttyS10","/dev/ttyS11",
@@ -44,7 +44,7 @@ SerialConnection::LinSconnImpl::LinSconnImpl()
     : m_error(0)
 {
     //init arrays to default value
-    for (auto& c : m_commPortHandles) c = -1;
+    for (auto& c : m_comPortHandles) c = -1;
 
 }
 
@@ -131,17 +131,17 @@ bool SerialConnection::LinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
     }
 
     //attempt to open port
-    m_commPortHandles[port] = open(commPorts[port], O_RDWR | O_NOCTTY | O_NDELAY);
-    if (m_commPortHandles[port] == -1)
+    m_comPortHandles[port] = open(comPorts[port], O_RDWR | O_NOCTTY | O_NDELAY);
+    if (m_comPortHandles[port] == -1)
     {
         perror("SerConn::OpenPort: Unable to open port");
         return false;
     }
     //apply port settings
-    error = tcgetattr(m_commPortHandles[port], m_oldPortSettings + port);
+    error = tcgetattr(m_comPortHandles[port], m_oldPortSettings + port);
     if (error == -1)
     {
-        close(m_commPortHandles[port]);
+        close(m_comPortHandles[port]);
         perror("SerConn::OpenPort: Unable to read port settings");
         return false;
     }
@@ -154,17 +154,17 @@ bool SerialConnection::LinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
     m_newPortSettings.c_cc[VMIN] = 0; //block until n bytes rcd
     m_newPortSettings.c_cc[VTIME] = 0; //block until timer expires
 
-    error = tcsetattr(m_commPortHandles[port], TCSANOW, &m_newPortSettings);
+    error = tcsetattr(m_comPortHandles[port], TCSANOW, &m_newPortSettings);
     if (error == -1)
     {
-        close(m_commPortHandles[port]);
+        close(m_comPortHandles[port]);
         perror("SerConn::OpenPort: Unable to apply port settings");
         return false;
     }
 
     //check port status
     int status = 0;
-    if (ioctl(m_commPortHandles[port], TIOCMGET, &status) == -1)
+    if (ioctl(m_comPortHandles[port], TIOCMGET, &status) == -1)
     {
         perror("SerConn::OpenPort: Unable to get port status");
         return false;
@@ -184,7 +184,7 @@ bool SerialConnection::LinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
 void SerialConnection::LinSconnImpl::closePort(std::uint16_t port)
 {
     int status = 0;
-    if (ioctl(m_commPortHandles[port], TIOCMGET, &status) == -1)
+    if (ioctl(m_comPortHandles[port], TIOCMGET, &status) == -1)
     {
         perror("SerConn::ClosePort: Unable to get port status");
     }
@@ -192,30 +192,30 @@ void SerialConnection::LinSconnImpl::closePort(std::uint16_t port)
     status &= ~TIOCM_DTR;
     status &= ~TIOCM_RTS;
 
-    if (ioctl(m_commPortHandles[port], TIOCMSET, &status) == -1)
+    if (ioctl(m_comPortHandles[port], TIOCMSET, &status) == -1)
     {
         perror("SerConn::ClosePort: Unable to set port status");
     }
 
-    close(m_commPortHandles[port]);
-    tcsetattr(m_commPortHandles[port], TCSANOW, m_oldPortSettings + port);
+    close(m_comPortHandles[port]);
+    tcsetattr(m_comPortHandles[port], TCSANOW, m_oldPortSettings + port);
 }
 
 bool SerialConnection::LinSconnImpl::readByte(std::uint16_t port, byte& dst)
 {
-    if (m_commPortHandles[port] == -1)
+    if (m_comPortHandles[port] == -1)
     {
         perror("SerConn::ReadByte: Invalid port specified");
         return false;
     }
 
-    read(m_commPortHandles[port], &dst, 1);
+    read(m_comPortHandles[port], &dst, 1);
     return true;
 }
 
 std::size_t SerialConnection::LinSconnImpl::readByteArray(std::uint16_t port, std::vector<byte>& dst)
 {
-    if (m_commPortHandles[port] == -1)
+    if (m_comPortHandles[port] == -1)
     {
         perror("SerConn::ReadByteArray: Invalid port specified");
         return false;
@@ -227,19 +227,19 @@ std::size_t SerialConnection::LinSconnImpl::readByteArray(std::uint16_t port, st
     assert(dst.size() < MAX_ARRAY_SIZE);
 #endif //__STRICT_ANSI__
 
-    auto readCount = read(m_commPortHandles[port], dst.data(), dst.size());
+    auto readCount = read(m_comPortHandles[port], dst.data(), dst.size());
     if (dst.size() > readCount) dst.resize(readCount);
     return readCount;
 }
 
 bool SerialConnection::LinSconnImpl::sendByte(std::uint16_t port, byte data)
 {
-    if (m_commPortHandles[port] == -1)
+    if (m_comPortHandles[port] == -1)
     {
         perror("SerConn::SendByte: Invalid port specified");
         return -1;
     }
-    int n = write(m_commPortHandles[port], &data, 1);
+    int n = write(m_comPortHandles[port], &data, 1);
     return (n >= 0);
 }
 
@@ -251,11 +251,20 @@ std::size_t SerialConnection::LinSconnImpl::sendByteArray(std::uint16_t port, co
     assert(data.size() < MAX_ARRAY_SIZE);
 #endif //__STRICT_ANSI__
 
-    if (m_commPortHandles[port] == -1)
+    if (m_comPortHandles[port] == -1)
     {
         perror("SerConn::SendByteArray: Invalid port specified");
         return 0;
     }
-    return write(m_commPortHandles[port], data.data(), data.size());
+    return write(m_comPortHandles[port], data.data(), data.size());
 }
+
+//linux version of static function
+std::vector<std::string> SerialConnection::SconnImpl::getAvailablePorts()
+{
+    //TODO check /dev/serial/ exists, and if it does list contents
+    
+    return{};
+}
+
 #endif //__LINUX__

@@ -27,7 +27,7 @@ source distribution.
 
 namespace
 {
-    const char commPorts[16][10] = 
+    const char comPorts[16][10] = 
     {
         "\\\\.\\COM0",  "\\\\.\\COM1",  "\\\\.\\COM2",  "\\\\.\\COM3",
         "\\\\.\\COM4",  "\\\\.\\COM5",  "\\\\.\\COM6",  "\\\\.\\COM7",
@@ -36,11 +36,32 @@ namespace
     };
 
     const std::size_t MAX_ARRAY_SIZE = 4096;
+
+    //wrapper around reg key to provide convenient release via RAII
+    struct KeyRelease
+    {
+    public:
+        KeyRelease(HKEY k) : m_key(k) {}
+        ~KeyRelease() { RegCloseKey(m_key); }
+    private:
+        HKEY m_key;
+    };
+
+    bool rxReady(HANDLE port)
+    {
+        if (SetCommMask(port, EV_RXCHAR))
+        {
+            unsigned long mask;
+            WaitCommEvent(port, &mask, nullptr); //TODO check result of this and report error if 0
+            return true;
+        }
+        return false;
+    }
 }
 
 SerialConnection::WinSconnImpl::WinSconnImpl()
 {
-    for (auto& h : m_commPortHandles)
+    for (auto& h : m_comPortHandles)
     {
         h = INVALID_HANDLE_VALUE;
     }
@@ -48,7 +69,7 @@ SerialConnection::WinSconnImpl::WinSconnImpl()
 
 SerialConnection::WinSconnImpl::~WinSconnImpl()
 {
-    for (auto& h : m_commPortHandles)
+    for (auto& h : m_comPortHandles)
     {
         if (h != INVALID_HANDLE_VALUE)
         {
@@ -116,9 +137,9 @@ bool SerialConnection::WinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
     }
 
     //get a handle to requested COM port
-    m_commPortHandles[port] = CreateFileA
+    m_comPortHandles[port] = CreateFileA
         (
-            commPorts[port],
+            comPorts[port],
             GENERIC_READ | GENERIC_WRITE,
             0, //no share
             0, //no security
@@ -128,7 +149,7 @@ bool SerialConnection::WinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
         ); //no template
 
     //check if port was created successfully
-    if (m_commPortHandles[port] == INVALID_HANDLE_VALUE)
+    if (m_comPortHandles[port] == INVALID_HANDLE_VALUE)
     {
         std::cerr << "Unable to open COM port " << port << std::endl;
         return false;
@@ -141,29 +162,29 @@ bool SerialConnection::WinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
     if (!BuildCommDCBA(m_baudrate.c_str(), &m_portSettings))
     {
         std::cerr << "Unable to apply COM port DCB settings." << std::endl;
-        CloseHandle(m_commPortHandles[port]);
+        CloseHandle(m_comPortHandles[port]);
         return false;
     }
 
-    if (!SetCommState(m_commPortHandles[port], &m_portSettings))
+    if (!SetCommState(m_comPortHandles[port], &m_portSettings))
     {
         std::cerr << "Unable to apply COM port cfg settings." << std::endl;
-        CloseHandle(m_commPortHandles[port]);
+        CloseHandle(m_comPortHandles[port]);
         return false;
     }
 
     //update timeout struct
-    m_commTimeouts.ReadIntervalTimeout = MAXDWORD;
-    m_commTimeouts.ReadTotalTimeoutConstant = 0;
-    m_commTimeouts.ReadTotalTimeoutMultiplier = 0;
-    m_commTimeouts.WriteTotalTimeoutConstant = 0;
-    m_commTimeouts.WriteTotalTimeoutMultiplier = 0;
+    m_comTimeouts.ReadIntervalTimeout = MAXDWORD;
+    m_comTimeouts.ReadTotalTimeoutConstant = 0;
+    m_comTimeouts.ReadTotalTimeoutMultiplier = 0;
+    m_comTimeouts.WriteTotalTimeoutConstant = 0;
+    m_comTimeouts.WriteTotalTimeoutMultiplier = 0;
 
     //apply timeout settings
-    if (!SetCommTimeouts(m_commPortHandles[port], &m_commTimeouts))
+    if (!SetCommTimeouts(m_comPortHandles[port], &m_comTimeouts))
     {
         std::cerr << "Unable to apply COM port timeout settings." << std::endl;
-        CloseHandle(m_commPortHandles[port]);
+        CloseHandle(m_comPortHandles[port]);
         return 1;
     }
 
@@ -172,19 +193,23 @@ bool SerialConnection::WinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
 
 void SerialConnection::WinSconnImpl::closePort(std::uint16_t port)
 {
-    if (m_commPortHandles[port] != INVALID_HANDLE_VALUE)
+    if (m_comPortHandles[port] != INVALID_HANDLE_VALUE)
     {
-        CloseHandle(m_commPortHandles[port]);
+        CloseHandle(m_comPortHandles[port]);
     }
 }
 
 bool SerialConnection::WinSconnImpl::readByte(std::uint16_t port, byte& dst)
 {
-    if (m_commPortHandles[port] != INVALID_HANDLE_VALUE)
+    HANDLE comport;
+    if ((comport = m_comPortHandles[port]) != INVALID_HANDLE_VALUE)
     {
-        int readResult;
-        ReadFile(m_commPortHandles[port], &dst, 1, (LPDWORD)((void*)&readResult), 0);
-        return (readResult > 0);
+        if (rxReady(comport))
+        {
+            int readResult;
+            ReadFile(comport, &dst, 1, (LPDWORD)((void*)&readResult), 0);
+            return (readResult > 0);
+        }
     }
     return false;
 }
@@ -193,23 +218,28 @@ std::size_t SerialConnection::WinSconnImpl::readByteArray(std::uint16_t port, st
 {
     assert(dst.size() <= MAX_ARRAY_SIZE); //limited to 4kb
     
-    if (m_commPortHandles[port] != INVALID_HANDLE_VALUE)
+    HANDLE comport;
+    if ((comport = m_comPortHandles[port]) != INVALID_HANDLE_VALUE)
     {
-        std::size_t readSize = 0;
+        if (rxReady(comport))
+        {            
+            std::size_t readSize = 0;
+            std::memset(dst.data(), 0, dst.size()); //make sure values are all 0 so strings appear null terminated
 
-        ReadFile(m_commPortHandles[port], dst.data(), dst.size(), (LPDWORD)((void*)&readSize), 0);
-        if(readSize < dst.size()) dst.resize(readSize);                
-        return readSize;
+            ReadFile(comport, dst.data(), dst.size(), (LPDWORD)((void*)&readSize), 0);
+            if (readSize < dst.size()) dst.resize(readSize);
+            return readSize;
+        }
     }
     return 0;
 }
 
 bool SerialConnection::WinSconnImpl::sendByte(std::uint16_t port, byte data)
 {
-    if (m_commPortHandles[port] != INVALID_HANDLE_VALUE)
+    if (m_comPortHandles[port] != INVALID_HANDLE_VALUE)
     {
         int sendResult;
-        WriteFile(m_commPortHandles[port], &data, 1, (LPDWORD)((void*)&sendResult), 0);
+        WriteFile(m_comPortHandles[port], &data, 1, (LPDWORD)((void*)&sendResult), 0);
         return (sendResult > 0);
     }
     return false;
@@ -218,13 +248,70 @@ bool SerialConnection::WinSconnImpl::sendByte(std::uint16_t port, byte data)
 std::size_t SerialConnection::WinSconnImpl::sendByteArray(std::uint16_t port, const std::vector<byte>& data)
 {
     assert(data.size() <= MAX_ARRAY_SIZE);
-    if (m_commPortHandles[port] != INVALID_HANDLE_VALUE)
+    HANDLE comport;
+    if ((comport = m_comPortHandles[port]) != INVALID_HANDLE_VALUE)
     {
         std::size_t sendResult;
-        WriteFile(m_commPortHandles[port], data.data(), data.size(), (LPDWORD)((void*)&sendResult), 0);
+        WriteFile(comport, data.data(), data.size(), (LPDWORD)((void*)&sendResult), 0);
         return sendResult;
     }
     return 0;
+}
+
+//windows version works by querying the registry for port names
+std::vector<std::string> SerialConnection::SconnImpl::getAvailablePorts()
+{
+    HKEY serialKey;
+    std::vector<std::string> portNames;
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM", 0, KEY_QUERY_VALUE, &serialKey) == ERROR_SUCCESS)
+    {
+        KeyRelease kr(serialKey);
+
+        unsigned long maxNameLength;
+        unsigned long maxValueLength;
+        auto queryInfo = RegQueryInfoKey(serialKey, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &maxNameLength, &maxValueLength, nullptr, nullptr);
+
+        if (queryInfo == ERROR_SUCCESS)
+        {
+            unsigned long nameSize = maxNameLength + 1;
+            unsigned long valueSize = (maxValueLength / sizeof(TCHAR)) + 1;
+
+            std::vector<char> nameData(nameSize * sizeof(TCHAR));
+            std::memset(nameData.data(), 0, nameData.size());
+            std::vector<unsigned char> valueData(maxValueLength);
+            std::memset(valueData.data(), 0, valueData.size());
+
+            int idx = 0;
+            unsigned long type = 0;
+            auto currentNameSize = nameSize;
+            unsigned long currentDataSize = nameData.size();
+            auto enumVal = RegEnumValue(serialKey, idx, static_cast<TCHAR*>(nameData.data()), &currentNameSize, nullptr, &type, static_cast<BYTE*>(valueData.data()), &currentDataSize);
+            
+            while (enumVal == ERROR_SUCCESS)
+            {
+                if (type == REG_SZ)
+                {
+                    //we have string value
+                    portNames.emplace_back(reinterpret_cast<TCHAR*>(valueData.data()));
+                    //TODO stash name string?
+                }
+
+                currentNameSize = nameSize;
+                currentDataSize = nameData.size();
+                std::memset(nameData.data(), 0, nameData.size());
+                std::memset(valueData.data(), 0, valueData.size());
+                idx++;
+                enumVal = RegEnumValue(serialKey, idx, static_cast<TCHAR*>(nameData.data()), &currentNameSize, nullptr, &type, static_cast<BYTE*>(valueData.data()), &currentDataSize);
+            }
+        }
+        else
+        {
+            //error
+            std::cerr << "Failed to query COM registry info" << std::endl;
+        }
+    }
+
+    return std::move(portNames);
 }
 
 #endif //_WIN32

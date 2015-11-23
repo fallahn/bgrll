@@ -101,6 +101,12 @@ public:
         return m_impl->sendByteArray(port, data);
     }
 
+    //returns a vector of strings containing the names of availble COM ports on the current system
+    std::vector<std::string> getAvailablePorts() const
+    {
+        return std::move(SconnImpl::getAvailablePorts());
+    }
+
 private:
     class SconnImpl
     {
@@ -116,6 +122,8 @@ private:
 
         virtual bool sendByte(std::uint16_t port, byte data) = 0;
         virtual std::size_t sendByteArray(std::uint16_t port, const std::vector<byte>& data) = 0;
+
+        static std::vector<std::string> getAvailablePorts();
 
     private:
 
@@ -141,9 +149,9 @@ private:
 
     private:
 
-        std::array<HANDLE, 16> m_commPortHandles;
+        std::array<HANDLE, 16> m_comPortHandles;
         DCB m_portSettings;
-        COMMTIMEOUTS m_commTimeouts;
+        COMMTIMEOUTS m_comTimeouts;
         std::string m_baudrate;
     };
 #elif defined __LINUX__
@@ -164,7 +172,7 @@ private:
 
     private:
 
-        std::array<int, 30> m_commPortHandles;
+        std::array<int, 30> m_comPortHandles;
         int m_error;
         termios m_newPortSettings;
         std::array<termios, 30> m_oldPortSettings;

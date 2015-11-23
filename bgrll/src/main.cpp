@@ -21,8 +21,32 @@ source distribution.
 
 #include <nana/gui/wvl.hpp>
 
+#include <SerialConn.hpp>
+
+#include <iostream>
+
 int main()
 {
+    SerialConnection sc;
+    auto ports = sc.getAvailablePorts();
+    for(const auto& p : ports) std::cout << p << std::endl;
+
+    if (ports[0] == "COM3")
+    {
+        if (sc.openPort(3, 115200))
+        {
+            std::cout << "Opened COM3" << std::endl;
+            std::vector<byte> send = { '$', 0 };
+            auto count = sc.sendByteArray(3, send);
+            std::cout << count << " bytes sent" << std::endl;
+            std::vector<byte> rcd(2000);
+            count = sc.readByteArray(3, rcd);
+            std::cout << count << " bytes received" << std::endl;
+            std::cout << std::string(reinterpret_cast<char*>(rcd.data())) << std::endl;
+        }
+    }
+
+
     nana::form form;
     form.caption("buns");
 
