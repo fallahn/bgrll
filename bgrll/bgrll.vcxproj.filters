@@ -24,9 +24,15 @@
     <ClCompile Include="src\LinSconnImpl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\MainWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\SerialConn.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MainWindow.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

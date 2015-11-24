@@ -28,5 +28,7 @@ int main()
     form.show();
     nana::exec();
 
+    //SfmlWidget : public nana::widget_object<frame_tag>
+
     return 0;
 }

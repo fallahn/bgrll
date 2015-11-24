@@ -19,44 +19,42 @@ and must not be misrepresented as being the original software.
 source distribution.
 *********************************************************************/
 
-#include <nana/gui/wvl.hpp>
-
-#include <SerialConn.hpp>
+#include <MainWindow.hpp>
+//#include <SerialConn.hpp>
 
 #include <iostream>
 
 int main()
 {
-    SerialConnection sc;
-    auto ports = sc.getAvailablePorts();
-    for(const auto& p : ports) std::cout << p << std::endl;
+    //SerialConnection sc;
+    //auto ports = sc.getAvailablePorts();
+    //for(const auto& p : ports) std::cout << p << std::endl;
 
-    if (ports[0] == "COM3")
-    {
-        if (sc.openPort(3, 115200))
-        {
-            std::cout << "Opened COM3" << std::endl;
+    //if (ports[0] == "COM3")
+    //{
+    //    if (sc.openPort(3, 115200))
+    //    {
+    //        std::cout << "Opened COM3" << std::endl;
 
-            std::vector<byte> rcd(2000);
-            auto count = sc.readByteArray(3, rcd);
-            std::cout << count << " bytes received" << std::endl;
-            std::cout << reinterpret_cast<char*>(rcd.data()) << std::endl;
+    //        std::vector<byte> rcd(2000);
+    //        auto count = sc.readByteArray(3, rcd);
+    //        std::cout << count << " bytes received" << std::endl;
+    //        std::cout << reinterpret_cast<char*>(rcd.data()) << std::endl;
 
-            std::vector<byte> send = { '$', '\r', '\n' };
-            count = sc.sendByteArray(3, send);
-            std::cout << count << " bytes sent" << std::endl;
+    //        std::vector<byte> send = { '$', '\r', '\n' };
+    //        count = sc.sendByteArray(3, send);
+    //        std::cout << count << " bytes sent" << std::endl;
 
-            count = sc.readByteArray(3, rcd);
-            std::cout << count << " bytes received" << std::endl;
-            std::cout << reinterpret_cast<char*>(rcd.data()) << std::endl;
-        }
-    }
+    //        count = sc.readByteArray(3, rcd);
+    //        std::cout << count << " bytes received" << std::endl;
+    //        std::cout << reinterpret_cast<char*>(rcd.data()) << std::endl;
+    //    }
+    //}
 
 
-    nana::form form;
-    form.caption("buns");
-
-    form.show();
+    MainWindow mw;
+    mw.caption("bgrll 0.1.1");
+    mw.show();
     nana::exec();
 
     return 0;
