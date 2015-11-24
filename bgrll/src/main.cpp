@@ -36,13 +36,19 @@ int main()
         if (sc.openPort(3, 115200))
         {
             std::cout << "Opened COM3" << std::endl;
-            std::vector<byte> send = { '$', 0 };
-            auto count = sc.sendByteArray(3, send);
-            std::cout << count << " bytes sent" << std::endl;
+
             std::vector<byte> rcd(2000);
+            auto count = sc.readByteArray(3, rcd);
+            std::cout << count << " bytes received" << std::endl;
+            std::cout << reinterpret_cast<char*>(rcd.data()) << std::endl;
+
+            std::vector<byte> send = { '$', '\r', '\n' };
+            count = sc.sendByteArray(3, send);
+            std::cout << count << " bytes sent" << std::endl;
+
             count = sc.readByteArray(3, rcd);
             std::cout << count << " bytes received" << std::endl;
-            std::cout << std::string(reinterpret_cast<char*>(rcd.data())) << std::endl;
+            std::cout << reinterpret_cast<char*>(rcd.data()) << std::endl;
         }
     }
 

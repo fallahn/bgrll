@@ -223,12 +223,19 @@ std::size_t SerialConnection::WinSconnImpl::readByteArray(std::uint16_t port, st
     {
         if (rxReady(comport))
         {            
-            std::size_t readSize = 0;
+            std::size_t total = 0;
             std::memset(dst.data(), 0, dst.size()); //make sure values are all 0 so strings appear null terminated
 
-            ReadFile(comport, dst.data(), dst.size(), (LPDWORD)((void*)&readSize), 0);
-            if (readSize < dst.size()) dst.resize(readSize);
-            return readSize;
+            for (auto& b : dst)
+            {
+                std::size_t readSize = 0;
+                ReadFile(comport, &b, 1, (LPDWORD)((void*)&readSize), 0);
+                total += readSize;
+                if (b == '\0') break; //reached end of string
+                SLEEP(getDelay());
+            }
+
+            return total;
         }
     }
     return 0;
@@ -251,9 +258,17 @@ std::size_t SerialConnection::WinSconnImpl::sendByteArray(std::uint16_t port, co
     HANDLE comport;
     if ((comport = m_comPortHandles[port]) != INVALID_HANDLE_VALUE)
     {
-        std::size_t sendResult;
-        WriteFile(comport, data.data(), data.size(), (LPDWORD)((void*)&sendResult), 0);
-        return sendResult;
+        //we send a byte at a time rather than the whole array as modern computers tend to send data too
+        //fast for grbl to keep up
+        std::size_t total = 0;
+        for (auto& b : data)
+        {
+            std::size_t sendResult;
+            WriteFile(comport, &b, 1, (LPDWORD)((void*)&sendResult), 0);
+            total += sendResult;
+            SLEEP(getDelay());
+        }
+        return total;
     }
     return 0;
 }

@@ -227,6 +227,7 @@ std::size_t SerialConnection::LinSconnImpl::readByteArray(std::uint16_t port, st
     assert(dst.size() < MAX_ARRAY_SIZE);
 #endif //__STRICT_ANSI__
 
+    //TODO need to read a byte at a time using the delay property
     auto readCount = read(m_comPortHandles[port], dst.data(), dst.size());
     if (dst.size() > readCount) dst.resize(readCount);
     return readCount;
@@ -256,6 +257,7 @@ std::size_t SerialConnection::LinSconnImpl::sendByteArray(std::uint16_t port, co
         perror("SerConn::SendByteArray: Invalid port specified");
         return 0;
     }
+    //TODO need to send a byte at a time using the delay property
     return write(m_comPortHandles[port], data.data(), data.size());
 }
 

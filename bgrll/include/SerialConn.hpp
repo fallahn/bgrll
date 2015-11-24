@@ -32,6 +32,7 @@ source distribution.
 #ifdef _WIN32
 #include <Windows.h>
 #define WIN32_LEAN_AND_MEAN
+#define SLEEP(x) Sleep(x)
 #elif defined __LINUX__
 #include <cstdio>
 #include <termios.h>
@@ -41,6 +42,7 @@ source distribution.
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#define SLEEP(x) usleep(1000 * x)
 #endif
 
 using byte = unsigned char;
@@ -107,6 +109,13 @@ public:
         return std::move(SconnImpl::getAvailablePorts());
     }
 
+    //sets a delay in milliseconds when sending or receiving each byte as PCs are generally too fast
+    //for a grbl controller (default is 10 milliseconds)
+    void setDelay(std::uint16_t delay)
+    {
+        m_impl->setDelay(delay);
+    }
+
 private:
     class SconnImpl
     {
@@ -125,8 +134,17 @@ private:
 
         static std::vector<std::string> getAvailablePorts();
 
-    private:
+        void setDelay(std::uint16_t delay)
+        {
+            m_delay = delay;
+        }
 
+        std::uint16_t getDelay() const
+        {
+            return m_delay;
+        }
+    private:
+        std::uint16_t m_delay = 10u;
     };
 
 
