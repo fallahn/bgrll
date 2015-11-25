@@ -34,8 +34,7 @@ if(WIN32)
   find_package(SFML 2 REQUIRED graphics window audio system network main)
 else()
   find_package(SFML 2 REQUIRED graphics window audio system network)
-  find_package(nana REQUIRED)
-  #TODO FindNANA.cmake
+  find_package(Nana REQUIRED)
 endif()
 
 if(UNIX)
@@ -45,6 +44,7 @@ endif()
 
 include_directories(
   ${SFML_INCLUDE_DIR}
+  ${NANA_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/include)
 
 if(X11_FOUND)
@@ -74,7 +74,7 @@ endif()
 
 target_link_libraries(bgrll
   ${SFML_LIBRARIES}
-  #${NANA_LIBRARIES}
+  ${NANA_LIBRARIES}
   ${SFML_DEPENDENCIES})
 
 if(UNIX)

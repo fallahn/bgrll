@@ -21,8 +21,6 @@ source distribution.
 
 #include <MainWindow.hpp>
 
-#include <nana/gui/widgets/button.hpp>
-
 namespace
 {
 
@@ -31,12 +29,6 @@ namespace
 MainWindow::MainWindow()
     : nana::form(nana::API::make_center(1024, 768), nana::appear::decorate<nana::appear::taskbar>())
 {
-    //left group contains visualisation
-    m_leftGroup.create(*this, { 0, 24, 512, 744 });
-
-    //right group contains serial console and jog controls
-    m_rightGroup.create(*this, { 512, 24, 512, 744 });
-
     buildMenuBar();
     buildComInterface();
 }
@@ -69,15 +61,20 @@ void MainWindow::buildMenuBar()
 
 void MainWindow::buildComInterface()
 {
-    m_serialInput.create(m_rightGroup, { 0, 0, 50, 20 });
-    //m_serialInput.caption(L"Input:");
-    m_serialInput.move({ 516, 24 });
-    m_rightGroup["serialInput"] << m_serialInput;
- 
-    nana::button button(m_rightGroup);
-    button.size({ 50, 50 });
-    button.caption(L"buns");
-    m_rightGroup["button"] << button;
-    m_rightGroup.collocate();
-    m_rightGroup.caption(L"flaps");
+    m_serialInputLabel.create(*this, { 516, 26, 64, 20 });
+    m_serialInputLabel.caption(L"Command:");
+    
+    m_serialInputTextBox.create(*this, { 580, 24, 300, 20 });
+    m_serialInputTextBox.multi_lines(false);
+    m_serialInputTextBox.line_wrapped(false);
+
+    m_serialInputButton.create(*this, nana::rectangle(900, 24, 100, 20));
+    m_serialInputButton.caption(L"Send Command");
+
+    m_serialOutputTextBox.create(*this, { 516, 56, 498, 400 });
+    m_serialOutputTextBox.multi_lines(true);
+    m_serialOutputTextBox.line_wrapped(false);
+    m_serialOutputTextBox.editable(false);
+
+    nana::string;
 }

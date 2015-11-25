@@ -25,7 +25,8 @@ source distribution.
 #include <nana/gui/wvl.hpp>
 #include <nana/gui/widgets/menubar.hpp>
 #include <nana/gui/widgets/textbox.hpp>
-#include <nana/gui/widgets/group.hpp>
+#include <nana/gui/widgets/button.hpp>
+#include <nana/gui/widgets/label.hpp>
 
 class MainWindow final : public nana::form
 {
@@ -35,11 +36,12 @@ public:
 
 private:
 
-    nana::group m_leftGroup; //TODO this needs to be a panel
-    nana::group m_rightGroup;
-
     nana::menubar m_menuBar;
-    nana::textbox m_serialInput;
+
+    nana::label m_serialInputLabel;
+    nana::textbox m_serialInputTextBox;
+    nana::textbox m_serialOutputTextBox;
+    nana::button m_serialInputButton;
 
     void buildMenuBar();
     void buildComInterface(); //commandline input and output window from RS232
