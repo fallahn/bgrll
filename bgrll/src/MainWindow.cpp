@@ -20,6 +20,7 @@ source distribution.
 *********************************************************************/
 
 #include <MainWindow.hpp>
+#include <Util.hpp>
 
 namespace
 {
@@ -41,17 +42,17 @@ MainWindow::MainWindow()
 void MainWindow::buildMenuBar()
 {
     m_menuBar.create(*this);
-    auto& fileMenu = m_menuBar.push_back(L"File");
-    fileMenu.append(L"exit", [this](nana::menu::item_proxy&) { close(); });
-    auto& toolsMenu = m_menuBar.push_back(L"Tools");
-    toolsMenu.append(L"Options", [](nana::menu::item_proxy&)
+    auto& fileMenu = m_menuBar.push_back(STR("File"));
+    fileMenu.append(STR("exit"), [this](nana::menu::item_proxy&) { close(); });
+    auto& toolsMenu = m_menuBar.push_back(STR("Tools"));
+    toolsMenu.append(STR("Options"), [](nana::menu::item_proxy&)
     {
         //TODO make this an options window
         nana::form optionsWindow;
         optionsWindow.modality();
     });
-    auto& helpMenu = m_menuBar.push_back(L"Help");
-    helpMenu.append(L"About", [](nana::menu::item_proxy&)
+    auto& helpMenu = m_menuBar.push_back(STR("Help"));
+    helpMenu.append(STR("About"), [](nana::menu::item_proxy&)
     {
         //TODO make this an about box
         nana::form aboutWindow;
@@ -61,17 +62,44 @@ void MainWindow::buildMenuBar()
 
 void MainWindow::buildComInterface()
 {
-    m_serialInputLabel.create(*this, { 516, 26, 64, 20 });
-    m_serialInputLabel.caption(L"Command:");
+    m_comportDropdown.create(*this, { 580, 24, 140, 20 });
+    auto ports = m_serialConnection.getAvailablePorts();
+    if (!ports.empty())
+    {
+        for (const auto& p : ports)
+        {
+            m_comportDropdown.push_back(STRU(p));
+        }
+    }
+    else
+    {
+        m_comportDropdown.push_back(STR("No COM ports available"));
+    }
+    m_comportDropdown.option(0);
+
+    m_baudrateDropdown.create(*this, { 740, 24, 140, 20 });
+    m_baudrateDropdown.push_back(STR("96000"));
+    m_baudrateDropdown.push_back(STR("115200"));
+    m_baudrateDropdown.option(0);
     
-    m_serialInputTextBox.create(*this, { 580, 24, 300, 20 });
+    m_connectButton.create(*this, nana::rectangle(900, 24, 114, 20));
+    m_connectButton.caption(STR("Connect"));
+    m_connectButton.events().click([]() {});
+
+    //--------------------------------------------------//
+
+    m_serialInputLabel.create(*this, { 516, 66, 64, 20 });
+    m_serialInputLabel.caption(STR("Command:"));
+    
+    m_serialInputTextBox.create(*this, { 580, 64, 300, 20 });
     m_serialInputTextBox.multi_lines(false);
     m_serialInputTextBox.line_wrapped(false);
 
-    m_serialInputButton.create(*this, nana::rectangle(900, 24, 100, 20));
-    m_serialInputButton.caption(L"Send Command");
+    m_serialInputButton.create(*this, nana::rectangle(900, 64, 114, 20));
+    m_serialInputButton.caption(STR("Send Command"));
+    m_serialInputButton.events().click([]() {});
 
-    m_serialOutputTextBox.create(*this, { 516, 56, 498, 400 });
+    m_serialOutputTextBox.create(*this, { 516, 96, 498, 400 });
     m_serialOutputTextBox.multi_lines(true);
     m_serialOutputTextBox.line_wrapped(false);
     m_serialOutputTextBox.editable(false);

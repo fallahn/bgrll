@@ -19,40 +19,40 @@ and must not be misrepresented as being the original software.
 source distribution.
 *********************************************************************/
 
-#ifndef MAIN_WINDOW_HPP_
-#define MAIN_WINDOW_HPP_
+// nana wants to use wstring *sigh* on windows and string on everything else
+// so here are some utilities to help us cope with that
 
-#include <nana/gui/wvl.hpp>
-#include <nana/gui/widgets/menubar.hpp>
-#include <nana/gui/widgets/textbox.hpp>
-#include <nana/gui/widgets/button.hpp>
-#include <nana/gui/widgets/label.hpp>
-#include <nana/gui/widgets/combox.hpp>
+#ifndef UTIL_FUNCS_HPP_
+#define UTIL_FUNCS_HPP_
 
-#include <SerialConn.hpp>
+#include <locale>
+#include <codecvt>
+#include <string>
 
-class MainWindow final : public nana::form
+#include <nana/config.hpp>
+
+#ifndef NANA_UNICODE
+#define STRU(x) x
+#else
+#define STRU(x) Util::String::toWideString(x)
+#endif //NANA_UNICODE
+
+namespace Util
 {
-public:
-    MainWindow();
-    ~MainWindow() = default;
+    namespace String
+    {
+        static inline std::wstring toWideString(const std::string& str)
+        {
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+            return converter.from_bytes(str);
+        }
 
-private:
-    SerialConnection m_serialConnection;
+        static inline std::string toNarrowString(const std::wstring& str)
+        {
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+            return converter.to_bytes(str);
+        }
+    }
+}
 
-    nana::menubar m_menuBar;
-
-    nana::combox m_comportDropdown;
-    nana::combox m_baudrateDropdown;
-    nana::button m_connectButton;
-
-    nana::label m_serialInputLabel;
-    nana::textbox m_serialInputTextBox;
-    nana::textbox m_serialOutputTextBox;
-    nana::button m_serialInputButton;
-
-    void buildMenuBar();
-    void buildComInterface(); //command line input and output window from RS232
-};
-
-#endif //MAIN_WINDOW_HPP_
+#endif //UTIL_FUNCS_HPP_
