@@ -19,41 +19,22 @@ and must not be misrepresented as being the original software.
 source distribution.
 *********************************************************************/
 
-#ifndef MAIN_WINDOW_HPP_
-#define MAIN_WINDOW_HPP_
+//allows using a WinMain entry point to remove the console window on windows
+//platforms. To enable define SUBSYSTEM_WINDOWS and set the subsystem settings
+//under linker system options to to Windows in Visual Studio.
+//TODO find out how to set the entry point in GCC/MinGW
 
-#include <nana/gui/wvl.hpp>
-#include <nana/gui/widgets/menubar.hpp>
-#include <nana/gui/widgets/textbox.hpp>
-#include <nana/gui/widgets/button.hpp>
-#include <nana/gui/widgets/label.hpp>
-#include <nana/gui/widgets/combox.hpp>
+#ifdef _WIN32
+#ifdef SUBSYSTEM_WINDOWS
 
-#include <SerialConn.hpp>
+#include <Windows.h>
 
-class MainWindow final : public nana::form
+extern int main(int argc, char* argv[]);
+
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, INT)
 {
-public:
-    MainWindow();
-    ~MainWindow() = default;
+    return main(__argc, __argv);
+}
 
-private:
-    SerialConnection m_serialConnection;
-
-    nana::menubar m_menuBar;
-
-    nana::label m_comportLabel;
-    nana::combox m_comportDropdown;
-    nana::combox m_baudrateDropdown;
-    nana::button m_connectButton;
-
-    nana::label m_serialInputLabel;
-    nana::textbox m_serialInputTextBox;
-    nana::textbox m_serialOutputTextBox;
-    nana::button m_serialInputButton;
-
-    void buildMenuBar();
-    void buildComInterface(); //command line input and output window from RS232
-};
-
-#endif //MAIN_WINDOW_HPP_
+#endif //SUBSYSTEM_WINDOWS
+#endif //_WIN32

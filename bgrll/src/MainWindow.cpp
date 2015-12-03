@@ -62,6 +62,9 @@ void MainWindow::buildMenuBar()
 
 void MainWindow::buildComInterface()
 {
+    m_comportLabel.create(*this, { 516, 26, 64, 20 });
+    m_comportLabel.caption(STR("Port:"));
+
     m_comportDropdown.create(*this, { 580, 24, 140, 20 });
     auto ports = m_serialConnection.getAvailablePorts();
     if (!ports.empty())
