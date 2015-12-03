@@ -22,16 +22,25 @@ source distribution.
 #include <MainWindow.hpp>
 #include <Util.hpp>
 
+#include <iostream>
+
 namespace
 {
-
+    std::size_t serialInputBufferSize = 200;
 }
 
 MainWindow::MainWindow()
-    : nana::form(nana::API::make_center(1024, 768), nana::appear::decorate<nana::appear::taskbar>())
+    : nana::form        (nana::API::make_center(1024, 768), nana::appear::decorate<nana::appear::taskbar>()),
+    m_runSerialThread   (false)
 {
     buildMenuBar();
     buildComInterface();
+}
+
+MainWindow::~MainWindow()
+{
+    m_runSerialThread = false;
+    m_threadPool.wait_for_finished();
 }
 
 //public
@@ -87,7 +96,27 @@ void MainWindow::buildComInterface()
     
     m_connectButton.create(*this, nana::rectangle(900, 24, 114, 20));
     m_connectButton.caption(STR("Connect"));
-    m_connectButton.events().click([]() {});
+    m_connectButton.events().click([this]()
+    {
+        if (m_connectButton.caption() == STR("Connect"))
+        {
+            m_connectButton.caption(STR("Disconnect"));
+            m_comportDropdown.enabled(false);
+            m_baudrateDropdown.enabled(false);
+
+            m_runSerialThread = true;
+            std::function<void()> serialFunc = std::bind(&MainWindow::serialThreadFunc, this);
+            nana::threads::pool_push(m_threadPool, serialFunc)();
+        }
+        else
+        {
+            m_connectButton.caption(STR("Connect"));
+            m_comportDropdown.enabled(true);
+            m_baudrateDropdown.enabled(true);
+
+            m_runSerialThread = false;
+        }
+    });
 
     //--------------------------------------------------//
 
@@ -108,4 +137,48 @@ void MainWindow::buildComInterface()
     m_serialOutputTextBox.editable(false);
 
     nana::string;
+}
+
+void MainWindow::serialThreadFunc()
+{
+    //as far as I can tell nana promises to sync access properly
+    //here goes....
+
+    std::uint16_t currentPort = static_cast<std::uint16_t>(Util::String::extractNum(m_comportDropdown.text(m_comportDropdown.option())));
+    std::uint32_t currentBaud = Util::String::extractNum(m_baudrateDropdown.text(m_baudrateDropdown.option()));
+
+    if (!m_serialConnection.openPort(currentPort, currentBaud))
+    {
+        m_serialConnection.closePort(currentPort);
+        m_serialOutputTextBox.append(STR("\nFailed to connect to selected COM port"), true);
+        m_connectButton.caption(STR("Connect"));
+        m_comportDropdown.enabled(true);
+        m_baudrateDropdown.enabled(true);
+
+        m_runSerialThread = false;
+        return;
+    }
+    
+    std::vector<byte> input(serialInputBufferSize);
+    m_serialConnection.readByteArray(currentPort, input);
+    std::string rxTxt(reinterpret_cast<char*>(input.data()));
+    m_serialOutputTextBox.append(STRU(rxTxt), true);
+    input.resize(serialInputBufferSize);
+
+    std::vector<byte> send = { '$', '\r', '\n' }; //queries grbl for current settings
+    auto sent = m_serialConnection.sendByteArray(currentPort, send);
+
+    //poll for input from serial port - TODO serial needs to have a timeout here
+    while (m_runSerialThread)
+    {
+        m_serialConnection.readByteArray(currentPort, input);
+        std::string rxTxt(reinterpret_cast<char*>(input.data()));
+        m_serialOutputTextBox.append(STRU(rxTxt), true);
+
+        input.resize(serialInputBufferSize);
+
+        SLEEP(500);
+    }
+
+    m_serialConnection.closePort(currentPort);
 }

@@ -196,6 +196,7 @@ void SerialConnection::WinSconnImpl::closePort(std::uint16_t port)
     if (m_comPortHandles[port] != INVALID_HANDLE_VALUE)
     {
         CloseHandle(m_comPortHandles[port]);
+        m_comPortHandles[port] = INVALID_HANDLE_VALUE;
     }
 }
 

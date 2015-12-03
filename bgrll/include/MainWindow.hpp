@@ -29,16 +29,21 @@ source distribution.
 #include <nana/gui/widgets/label.hpp>
 #include <nana/gui/widgets/combox.hpp>
 
+#include <nana/threads/pool.hpp>
+
 #include <SerialConn.hpp>
+
+#include <atomic>
 
 class MainWindow final : public nana::form
 {
 public:
     MainWindow();
-    ~MainWindow() = default;
+    ~MainWindow();
 
 private:
     SerialConnection m_serialConnection;
+    nana::threads::pool m_threadPool;
 
     nana::menubar m_menuBar;
 
@@ -54,6 +59,9 @@ private:
 
     void buildMenuBar();
     void buildComInterface(); //command line input and output window from RS232
+
+    std::atomic_bool m_runSerialThread;
+    void serialThreadFunc();
 };
 
 #endif //MAIN_WINDOW_HPP_

@@ -52,6 +52,42 @@ namespace Util
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
             return converter.to_bytes(str);
         }
+
+        static inline std::int32_t extractNum(const std::string& str)
+        {
+            static std::string numbers = "0123456789";
+            std::string retVal;
+
+            std::size_t result = str.find_first_of(numbers.c_str());
+
+            while (result != std::string::npos)
+            {
+                retVal.push_back(str[result]);
+                std::size_t lastResult = result;
+                result = str.find_first_of(numbers.c_str(), result + 1);
+                if (result - lastResult > 1) break;
+            }
+
+            return std::atoi(retVal.c_str());
+        }
+
+        static inline std::int32_t extractNum(const std::wstring& str)
+        {
+            static std::wstring numbers = L"0123456789";
+            std::wstring retVal;
+
+            std::size_t result = str.find_first_of(numbers.c_str());
+
+            while (result != std::string::npos)
+            {
+                retVal.push_back(str[result]);
+                std::size_t lastResult = result;
+                result = str.find_first_of(numbers.c_str(), result + 1);
+                if (result - lastResult > 1) break;
+            }
+
+            return std::atoi(toNarrowString(retVal).c_str());
+        }
     }
 }
 
