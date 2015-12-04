@@ -19,14 +19,38 @@ and must not be misrepresented as being the original software.
 source distribution.
 *********************************************************************/
 
-#include <MainWindow.hpp>
+//used to draw the preview of currently running job
 
-int main()
+#ifndef PREVIEW_WINDOW_HPP_
+#define PREVIEW_WINDOW_HPP_
+
+#include <atomic>
+
+namespace nana
 {
-    MainWindow mw;
-    mw.caption("bgrll 0.1.1");
-    mw.show();
-    nana::exec();
-
-    return 0;
+    class nested_form;
 }
+
+namespace sf
+{
+    class RenderWindow;
+}
+
+class PreviewWindow final
+{
+public:
+    PreviewWindow();
+    
+    void start(const nana::nested_form&);
+    void end();
+
+private:
+
+    std::atomic_bool m_running;
+
+    void handleEvents(sf::RenderWindow&);
+    void update(float);
+    void draw(sf::RenderWindow&);
+};
+
+#endif //PREVIEW_WINDOW_HPP_

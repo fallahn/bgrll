@@ -32,6 +32,7 @@ source distribution.
 #include <nana/threads/pool.hpp>
 
 #include <SerialConn.hpp>
+#include <PreviewWindow.hpp>
 
 #include <atomic>
 
@@ -56,6 +57,9 @@ private:
     nana::textbox m_serialInputTextBox;
     nana::textbox m_serialOutputTextBox;
     nana::button m_serialInputButton;
+
+    nana::nested_form m_previewWindowForm;
+    PreviewWindow m_previewWindow;
 
     void buildMenuBar();
     void buildComInterface(); //command line input and output window from RS232

@@ -135,11 +135,13 @@
     <ClCompile Include="src\LinSconnImpl.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\MainWindow.cpp" />
+    <ClCompile Include="src\PreviewWindow.cpp" />
     <ClCompile Include="src\SubSystemWindows.cpp" />
     <ClCompile Include="src\WinSconnImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\MainWindow.hpp" />
+    <ClInclude Include="include\PreviewWindow.hpp" />
     <ClInclude Include="include\SerialConn.hpp" />
     <ClInclude Include="include\Util.hpp" />
   </ItemGroup>

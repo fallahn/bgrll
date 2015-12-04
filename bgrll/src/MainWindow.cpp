@@ -33,15 +33,27 @@ namespace
 MainWindow::MainWindow()
     : nana::form        (nana::API::make_center(1024, 768), nana::appear::decorate<nana::appear::taskbar>()),
     m_runSerialThread   (false),
-    m_currentPort       (noPort)
+    m_currentPort       (noPort),
+    m_previewWindowForm (*this, { 10, 26, 504, 470 }, {false, false, false, false, false, false, false})
 {
     buildMenuBar();
     buildComInterface();
+
+    m_previewWindowForm.bgcolor({ 0, 0, 0 });
+    m_previewWindowForm.show();
+
+    //launch SFML in own thread
+    auto previewThread = nana::threads::pool_push(m_threadPool, [this]()
+    {
+        m_previewWindow.start(m_previewWindowForm);
+    });
+    previewThread();
 }
 
 MainWindow::~MainWindow()
 {
     m_runSerialThread = false;
+    m_previewWindow.end();
     m_threadPool.wait_for_finished();
 }
 
@@ -54,7 +66,10 @@ void MainWindow::buildMenuBar()
 {
     m_menuBar.create(*this);
     auto& fileMenu = m_menuBar.push_back(STR("File"));
-    fileMenu.append(STR("exit"), [this](nana::menu::item_proxy&) { close(); });
+    fileMenu.append(STR("Open .nc File"), [this](nana::menu::item_proxy&) {});
+    fileMenu.append(STR("Close File"), [this](nana::menu::item_proxy&) {});
+    fileMenu.append(STR("Exit"), [this](nana::menu::item_proxy&) { close(); });
+    
     auto& toolsMenu = m_menuBar.push_back(STR("Tools"));
     toolsMenu.append(STR("Options"), [](nana::menu::item_proxy&)
     {
@@ -73,10 +88,10 @@ void MainWindow::buildMenuBar()
 
 void MainWindow::buildComInterface()
 {
-    m_comportLabel.create(*this, { 516, 26, 64, 20 });
+    m_comportLabel.create(*this, { 526, 26, 64, 20 });
     m_comportLabel.caption(STR("Port:"));
 
-    m_comportDropdown.create(*this, { 580, 24, 140, 20 });
+    m_comportDropdown.create(*this, { 590, 24, 140, 20 });
     auto ports = m_serialConnection.getAvailablePorts();
     if (!ports.empty())
     {
@@ -91,7 +106,7 @@ void MainWindow::buildComInterface()
     }
     m_comportDropdown.option(0);
 
-    m_baudrateDropdown.create(*this, { 740, 24, 140, 20 });
+    m_baudrateDropdown.create(*this, { 750, 24, 140, 20 });
     m_baudrateDropdown.push_back(STR("96000"));
     m_baudrateDropdown.push_back(STR("115200"));
     m_baudrateDropdown.option(0);
@@ -124,10 +139,10 @@ void MainWindow::buildComInterface()
 
     //--------------------------------------------------//
 
-    m_serialInputLabel.create(*this, { 516, 66, 64, 20 });
+    m_serialInputLabel.create(*this, { 526, 66, 64, 20 });
     m_serialInputLabel.caption(STR("Command:"));
     
-    m_serialInputTextBox.create(*this, { 580, 64, 300, 20 });
+    m_serialInputTextBox.create(*this, { 590, 64, 300, 20 });
     m_serialInputTextBox.multi_lines(false);
     m_serialInputTextBox.line_wrapped(false);
 
@@ -159,10 +174,11 @@ void MainWindow::buildComInterface()
         }    
     });
 
-    m_serialOutputTextBox.create(*this, { 516, 96, 498, 400 });
+    m_serialOutputTextBox.create(*this, { 526, 96, 488, 400 });
     m_serialOutputTextBox.multi_lines(true);
     m_serialOutputTextBox.line_wrapped(false);
     m_serialOutputTextBox.editable(false);
+    m_serialOutputTextBox.append(L"Disconnected...\n", true);
 
     nana::string;
 }

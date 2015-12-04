@@ -30,6 +30,9 @@
     <ClCompile Include="src\SubSystemWindows.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\PreviewWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\SerialConn.hpp">
@@ -39,6 +42,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Util.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PreviewWindow.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
