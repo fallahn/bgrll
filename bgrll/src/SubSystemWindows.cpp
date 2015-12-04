@@ -21,8 +21,8 @@ source distribution.
 
 //allows using a WinMain entry point to remove the console window on windows
 //platforms. To enable define SUBSYSTEM_WINDOWS and set the subsystem settings
-//under linker system options to to Windows in Visual Studio.
-//TODO find out how to set the entry point in GCC/MinGW
+//under linker system options to to Windows in Visual Studio, or set the linker
+//flag -Wl,--subsystem,windows in gcc/MinGW
 
 #ifdef _WIN32
 #ifdef SUBSYSTEM_WINDOWS

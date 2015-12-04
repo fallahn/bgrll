@@ -26,12 +26,14 @@ source distribution.
 
 namespace
 {
-    std::size_t serialInputBufferSize = 200;
+    std::size_t serialInputBufferSize = 1024;
+    std::int16_t noPort = -1;
 }
 
 MainWindow::MainWindow()
     : nana::form        (nana::API::make_center(1024, 768), nana::appear::decorate<nana::appear::taskbar>()),
-    m_runSerialThread   (false)
+    m_runSerialThread   (false),
+    m_currentPort       (noPort)
 {
     buildMenuBar();
     buildComInterface();
@@ -98,11 +100,13 @@ void MainWindow::buildComInterface()
     m_connectButton.caption(STR("Connect"));
     m_connectButton.events().click([this]()
     {
-        if (m_connectButton.caption() == STR("Connect"))
+        if (m_currentPort == -1)
         {
             m_connectButton.caption(STR("Disconnect"));
             m_comportDropdown.enabled(false);
             m_baudrateDropdown.enabled(false);
+
+            m_serialOutputTextBox.append(STR("Connecting...\n"), true);
 
             m_runSerialThread = true;
             std::function<void()> serialFunc = std::bind(&MainWindow::serialThreadFunc, this);
@@ -129,7 +133,31 @@ void MainWindow::buildComInterface()
 
     m_serialInputButton.create(*this, nana::rectangle(900, 64, 114, 20));
     m_serialInputButton.caption(STR("Send Command"));
-    m_serialInputButton.events().click([]() {});
+    m_serialInputButton.events().click([this]()
+    {
+        if (m_currentPort != noPort)
+        {
+            nana::string text;
+            m_serialInputTextBox.getline(0, text);
+
+            if (text.empty()) return;
+            text += L"\r\n";
+
+            std::string ntext = STRD(text);
+            std::vector<byte> data(ntext.size());
+            std::memcpy(data.data(), ntext.data(), ntext.size());
+            auto sent = m_serialConnection.sendByteArray(m_currentPort, data);
+            if (sent > 0)
+            {
+                m_serialOutputTextBox.append(text, true);
+            }
+            else
+            {
+                m_serialOutputTextBox.append(STR("Failed sending command\n"), true);
+            }
+            m_serialInputTextBox.reset();
+        }    
+    });
 
     m_serialOutputTextBox.create(*this, { 516, 96, 498, 400 });
     m_serialOutputTextBox.multi_lines(true);
@@ -144,41 +172,52 @@ void MainWindow::serialThreadFunc()
     //as far as I can tell nana promises to sync access properly
     //here goes....
 
-    std::uint16_t currentPort = static_cast<std::uint16_t>(Util::String::extractNum(m_comportDropdown.text(m_comportDropdown.option())));
+    //TODO this won't work on linux as port names also include information such as whether or not they are USB ports
+    m_currentPort = static_cast<std::uint16_t>(Util::String::extractNum(m_comportDropdown.text(m_comportDropdown.option())));
     std::uint32_t currentBaud = Util::String::extractNum(m_baudrateDropdown.text(m_baudrateDropdown.option()));
 
-    if (!m_serialConnection.openPort(currentPort, currentBaud))
+    if (!m_serialConnection.openPort(m_currentPort, currentBaud))
     {
-        m_serialConnection.closePort(currentPort);
+        m_serialConnection.closePort(m_currentPort);
         m_serialOutputTextBox.append(STR("\nFailed to connect to selected COM port"), true);
         m_connectButton.caption(STR("Connect"));
         m_comportDropdown.enabled(true);
         m_baudrateDropdown.enabled(true);
 
         m_runSerialThread = false;
+        m_currentPort = noPort;
         return;
     }
     
     std::vector<byte> input(serialInputBufferSize);
-    m_serialConnection.readByteArray(currentPort, input);
-    std::string rxTxt(reinterpret_cast<char*>(input.data()));
-    m_serialOutputTextBox.append(STRU(rxTxt), true);
+    m_serialConnection.readByteArray(m_currentPort, input);
+    printToConsole(input);
     input.resize(serialInputBufferSize);
 
-    std::vector<byte> send = { '$', '\r', '\n' }; //queries grbl for current settings
-    auto sent = m_serialConnection.sendByteArray(currentPort, send);
+    std::vector<byte> send = { '$', '\r', '\n', '\0' }; //queries grbl for current settings
+    m_serialConnection.sendByteArray(m_currentPort, send);
+    printToConsole(send);
 
-    //poll for input from serial port - TODO serial needs to have a timeout here
+    //poll for input from serial port
     while (m_runSerialThread)
     {
-        m_serialConnection.readByteArray(currentPort, input);
-        std::string rxTxt(reinterpret_cast<char*>(input.data()));
-        m_serialOutputTextBox.append(STRU(rxTxt), true);
-
-        input.resize(serialInputBufferSize);
-
+        auto rxd = m_serialConnection.readByteArray(m_currentPort, input);
+        if (rxd > 0)
+        {
+            printToConsole(input);
+            input.resize(serialInputBufferSize);
+        }
         SLEEP(500);
     }
 
-    m_serialConnection.closePort(currentPort);
+    m_serialConnection.closePort(m_currentPort);
+    m_currentPort = noPort;
+
+    m_serialOutputTextBox.append(STR("\nDisconnected...\n"), true);
+}
+
+void MainWindow::printToConsole(const std::vector<byte>& str)
+{
+    std::string txt(reinterpret_cast<const char*>(str.data()));
+    m_serialOutputTextBox.append(STRU(txt), true);
 }

@@ -52,11 +52,20 @@ namespace
         if (SetCommMask(port, EV_RXCHAR))
         {
             unsigned long mask;
-            WaitCommEvent(port, &mask, nullptr); //TODO check result of this and report error if 0
-            return true;
+            if (WaitCommEvent(port, &mask, nullptr))
+            {
+                return true;
+            }
+            else
+            {
+                std::cerr << "Failed to set WaitCommEvent: " << GetLastError() << std::endl;
+                return false;
+            }
         }
         return false;
     }
+
+    const std::uint32_t maxReadyFailCount = 200u;
 }
 
 SerialConnection::WinSconnImpl::WinSconnImpl()
@@ -175,9 +184,9 @@ bool SerialConnection::WinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
 
     //update timeout struct
     m_comTimeouts.ReadIntervalTimeout = MAXDWORD;
-    m_comTimeouts.ReadTotalTimeoutConstant = 0;
+    m_comTimeouts.ReadTotalTimeoutConstant = 2000;
     m_comTimeouts.ReadTotalTimeoutMultiplier = 0;
-    m_comTimeouts.WriteTotalTimeoutConstant = 0;
+    m_comTimeouts.WriteTotalTimeoutConstant = 500;
     m_comTimeouts.WriteTotalTimeoutMultiplier = 0;
 
     //apply timeout settings
@@ -189,6 +198,11 @@ bool SerialConnection::WinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
     }
 
     return true;
+}
+
+bool SerialConnection::WinSconnImpl::portOpened(std::uint16_t port) const
+{
+    return (m_comPortHandles[port] != INVALID_HANDLE_VALUE);
 }
 
 void SerialConnection::WinSconnImpl::closePort(std::uint16_t port)
@@ -205,7 +219,7 @@ bool SerialConnection::WinSconnImpl::readByte(std::uint16_t port, byte& dst)
     HANDLE comport;
     if ((comport = m_comPortHandles[port]) != INVALID_HANDLE_VALUE)
     {
-        if (rxReady(comport))
+        //if (rxReady(comport))
         {
             int readResult;
             ReadFile(comport, &dst, 1, (LPDWORD)((void*)&readResult), 0);
@@ -222,7 +236,7 @@ std::size_t SerialConnection::WinSconnImpl::readByteArray(std::uint16_t port, st
     HANDLE comport;
     if ((comport = m_comPortHandles[port]) != INVALID_HANDLE_VALUE)
     {
-        if (rxReady(comport))
+        //if (rxReady(comport)) //actually works better if we set a longer timeout when opening port
         {            
             std::size_t total = 0;
             std::memset(dst.data(), 0, dst.size()); //make sure values are all 0 so strings appear null terminated

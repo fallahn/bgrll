@@ -68,6 +68,13 @@ public:
         return m_impl->openPort(port, baud);
     }
 
+    //returns true if given port is currently open, else
+    //returns false
+    bool portOpened(std::uint16_t port) const
+    {
+        return m_impl->portOpened(port);
+    }
+
     //closes given port if it is open
     void closePort(std::uint16_t port)
     {
@@ -124,6 +131,7 @@ private:
         virtual ~SconnImpl() = default;
 
         virtual bool openPort(std::uint16_t port, std::uint32_t baud) = 0;
+        virtual bool portOpened(std::uint16_t port) const = 0;
         virtual void closePort(std::uint16_t port) = 0;
 
         virtual bool readByte(std::uint16_t port, byte& dst) = 0;
@@ -157,6 +165,7 @@ private:
         ~WinSconnImpl();
 
         bool openPort(std::uint16_t port, std::uint32_t baud) override;
+        bool portOpened(std::uint16_t port) const override;
         void closePort(std::uint16_t port) override;
 
         bool readByte(std::uint16_t port, byte& dst) override;
@@ -180,6 +189,7 @@ private:
         ~LinSconnImpl() = default;
 
         bool openPort(std::uint16_t port, std::uint32_t baud) override;
+        bool portOpened(std::uint16_t port) const override;
         void closePort(std::uint16_t port) override;
 
         bool readByte(std::uint16_t port, byte& dst) override;

@@ -61,7 +61,10 @@ private:
     void buildComInterface(); //command line input and output window from RS232
 
     std::atomic_bool m_runSerialThread;
+    std::atomic_short m_currentPort;
     void serialThreadFunc();
+
+    void printToConsole(const std::vector<byte>&);
 };
 
 #endif //MAIN_WINDOW_HPP_

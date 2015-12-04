@@ -20,9 +20,6 @@ source distribution.
 *********************************************************************/
 
 #include <MainWindow.hpp>
-//#include <SerialConn.hpp>
-
-#include <iostream>
 
 int main()
 {

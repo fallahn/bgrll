@@ -28,13 +28,16 @@ source distribution.
 #include <locale>
 #include <codecvt>
 #include <string>
+#include <cassert>
 
 #include <nana/config.hpp>
 
 #ifndef NANA_UNICODE
 #define STRU(x) x
+#define STRD(x) x
 #else
 #define STRU(x) Util::String::toWideString(x)
+#define STRD(x) Util::String::toNarrowString(x)
 #endif //NANA_UNICODE
 
 namespace Util
@@ -43,12 +46,14 @@ namespace Util
     {
         static inline std::wstring toWideString(const std::string& str)
         {
+            assert(!str.empty());
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
             return converter.from_bytes(str);
         }
 
         static inline std::string toNarrowString(const std::wstring& str)
         {
+            assert(!str.empty());
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
             return converter.to_bytes(str);
         }

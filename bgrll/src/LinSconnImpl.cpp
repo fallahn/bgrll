@@ -181,6 +181,11 @@ bool SerialConnection::LinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
     return true;
 }
 
+bool SerialConnection::LinSconnImpl::portOpened(std::uint16_t port) const
+{
+    return false;
+}
+
 void SerialConnection::LinSconnImpl::closePort(std::uint16_t port)
 {
     int status = 0;
