@@ -33,7 +33,7 @@ source distribution.
 #include <Windows.h>
 #define WIN32_LEAN_AND_MEAN
 #define SLEEP(x) Sleep(x)
-#elif defined __LINUX__
+#elif defined __linux
 #include <cstdio>
 #include <termios.h>
 #include <unistd.h>
@@ -52,7 +52,7 @@ class SerialConnection final
 public:
     SerialConnection()
     {
-#ifdef __LINUX__
+#ifdef __linux
         m_impl = std::make_unique<LinSconnImpl>();
 #elif defined(_WIN32)
         m_impl = std::make_unique<WinSconnImpl>();
@@ -181,7 +181,7 @@ private:
         COMMTIMEOUTS m_comTimeouts;
         std::string m_baudrate;
     };
-#elif defined __LINUX__
+#elif defined __linux
     class LinSconnImpl final : public SconnImpl
     {
     public:

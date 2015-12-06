@@ -23,6 +23,7 @@ source distribution.
 #include <Util.hpp>
 
 #include <iostream>
+#include <cstring>
 
 namespace
 {
@@ -32,9 +33,9 @@ namespace
 
 MainWindow::MainWindow()
     : nana::form        (nana::API::make_center(1024, 768), nana::appear::decorate<nana::appear::taskbar>()),
+    m_previewWindowForm (*this, { 10, 26, 504, 470 }, {false, false, false, false, false, false, false}),
     m_runSerialThread   (false),
-    m_currentPort       (noPort),
-    m_previewWindowForm (*this, { 10, 26, 504, 470 }, {false, false, false, false, false, false, false})
+    m_currentPort       (noPort)
 {
     buildMenuBar();
     buildComInterface();
@@ -73,7 +74,7 @@ void MainWindow::buildMenuBar()
     fileMenu.append(STR("Open .nc File"), [this](nana::menu::item_proxy&) {});
     fileMenu.append(STR("Close File"), [this](nana::menu::item_proxy&) {});
     fileMenu.append(STR("Exit"), [this](nana::menu::item_proxy&) { close(); });
-    
+
     auto& toolsMenu = m_menuBar.push_back(STR("Tools"));
     toolsMenu.append(STR("Options"), [](nana::menu::item_proxy&)
     {
@@ -114,7 +115,7 @@ void MainWindow::buildComInterface()
     m_baudrateDropdown.push_back(STR("9600"));
     m_baudrateDropdown.push_back(STR("115200"));
     m_baudrateDropdown.option(0);
-    
+
     m_connectButton.create(*this, nana::rectangle(900, 24, 114, 20));
     m_connectButton.caption(STR("Connect"));
     m_connectButton.events().click([this]()
@@ -145,7 +146,7 @@ void MainWindow::buildComInterface()
 
     m_serialInputLabel.create(*this, { 526, 66, 64, 20 });
     m_serialInputLabel.caption(STR("Command:"));
-    
+
     m_serialInputTextBox.create(*this, { 590, 64, 300, 20 });
     m_serialInputTextBox.multi_lines(false);
     m_serialInputTextBox.line_wrapped(false);
@@ -175,7 +176,7 @@ void MainWindow::buildComInterface()
                 m_serialOutputTextBox.append(STR("Failed sending command\n"), true);
             }
             m_serialInputTextBox.reset();
-        }    
+        }
     });
 
     m_serialOutputTextBox.create(*this, { 526, 96, 488, 400 });
@@ -183,8 +184,6 @@ void MainWindow::buildComInterface()
     m_serialOutputTextBox.line_wrapped(false);
     m_serialOutputTextBox.editable(false);
     m_serialOutputTextBox.append(L"Disconnected...\n", true);
-
-    nana::string;
 }
 
 void MainWindow::serialThreadFunc()
@@ -208,7 +207,7 @@ void MainWindow::serialThreadFunc()
         m_currentPort = noPort;
         return;
     }
-    
+
     std::vector<byte> input(serialInputBufferSize);
     auto rxd = m_serialConnection.readByteArray(m_currentPort, input);
     if (rxd > 0)

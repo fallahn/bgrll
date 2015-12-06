@@ -19,17 +19,18 @@ and must not be misrepresented as being the original software.
 source distribution.
 *********************************************************************/
 
-#ifdef __LINUX__
+#ifdef __linux
 
 #include <SerialConn.hpp>
 
 #include <iostream>
 #include <cassert>
+#include <cstring>
 
 namespace
 {
-    const char comPorts[30][16] = 
-    { 
+    const char comPorts[30][16] =
+    {
         "/dev/ttyS0","/dev/ttyS1","/dev/ttyS2","/dev/ttyS3","/dev/ttyS4","/dev/ttyS5",
         "/dev/ttyS6","/dev/ttyS7","/dev/ttyS8","/dev/ttyS9","/dev/ttyS10","/dev/ttyS11",
         "/dev/ttyS12","/dev/ttyS13","/dev/ttyS14","/dev/ttyS15","/dev/ttyUSB0",
@@ -138,7 +139,7 @@ bool SerialConnection::LinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
         return false;
     }
     //apply port settings
-    error = tcgetattr(m_comPortHandles[port], m_oldPortSettings + port);
+    int error = tcgetattr(m_comPortHandles[port], &m_oldPortSettings[port]);
     if (error == -1)
     {
         close(m_comPortHandles[port]);
@@ -146,7 +147,7 @@ bool SerialConnection::LinSconnImpl::openPort(std::uint16_t port, std::uint32_t 
         return false;
     }
     //clear and set port settings struct
-    memset(&m_newPortSettings, 0, sizeof(m_newPortSettings));
+    std::memset(&m_newPortSettings, 0, sizeof(m_newPortSettings));
     m_newPortSettings.c_cflag = baudrate | CS8 | CLOCAL | CREAD;
     m_newPortSettings.c_iflag = IGNPAR;
     m_newPortSettings.c_oflag = 0;
@@ -203,7 +204,7 @@ void SerialConnection::LinSconnImpl::closePort(std::uint16_t port)
     }
 
     close(m_comPortHandles[port]);
-    tcsetattr(m_comPortHandles[port], TCSANOW, m_oldPortSettings + port);
+    tcsetattr(m_comPortHandles[port], TCSANOW, &m_oldPortSettings[port]);
 }
 
 bool SerialConnection::LinSconnImpl::readByte(std::uint16_t port, byte& dst)
@@ -270,7 +271,7 @@ std::size_t SerialConnection::LinSconnImpl::sendByteArray(std::uint16_t port, co
 std::vector<std::string> SerialConnection::SconnImpl::getAvailablePorts()
 {
     //TODO check /dev/serial/ exists, and if it does list contents
-    
+
     return{};
 }
 

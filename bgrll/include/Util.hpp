@@ -26,7 +26,11 @@ source distribution.
 #define UTIL_FUNCS_HPP_
 
 #include <locale>
+//TODO this is not yet implemented in gcc
+//create a linux workaround with http://stackoverflow.com/questions/15615136/is-codecvt-not-a-std-header
+#ifdef _MSC_VER
 #include <codecvt>
+#endif //_MSC_VER
 #include <string>
 #include <cassert>
 
@@ -44,6 +48,7 @@ namespace Util
 {
     namespace String
     {
+ #ifdef _MSC_VER
         static inline std::wstring toWideString(const std::string& str)
         {
             assert(!str.empty());
@@ -57,6 +62,17 @@ namespace Util
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
             return converter.to_bytes(str);
         }
+#else //codecvt not supported
+        static inline std::wstring toWideString(const std::string& str)
+        {
+            return std::wstring();
+        }
+
+        static inline std::string toNarrowString(const std::wstring& str)
+        {
+            return std::string();
+        }
+#endif //_MSC_VER
 
         static inline std::int32_t extractNum(const std::string& str)
         {
