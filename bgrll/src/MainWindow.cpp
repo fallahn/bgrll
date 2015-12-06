@@ -52,6 +52,10 @@ MainWindow::MainWindow()
 
 MainWindow::~MainWindow()
 {
+#ifndef NDEBUG
+    std::cerr << "Finishing up remaining threads..." << std::endl;
+#endif //NDEBUG
+
     m_runSerialThread = false;
     m_previewWindow.end();
     m_threadPool.wait_for_finished();
@@ -107,7 +111,7 @@ void MainWindow::buildComInterface()
     m_comportDropdown.option(0);
 
     m_baudrateDropdown.create(*this, { 750, 24, 140, 20 });
-    m_baudrateDropdown.push_back(STR("96000"));
+    m_baudrateDropdown.push_back(STR("9600"));
     m_baudrateDropdown.push_back(STR("115200"));
     m_baudrateDropdown.option(0);
     
@@ -195,7 +199,7 @@ void MainWindow::serialThreadFunc()
     if (!m_serialConnection.openPort(m_currentPort, currentBaud))
     {
         m_serialConnection.closePort(m_currentPort);
-        m_serialOutputTextBox.append(STR("\nFailed to connect to selected COM port"), true);
+        m_serialOutputTextBox.append(STR("\nFailed to connect to selected COM port\n"), true);
         m_connectButton.caption(STR("Connect"));
         m_comportDropdown.enabled(true);
         m_baudrateDropdown.enabled(true);
@@ -206,9 +210,12 @@ void MainWindow::serialThreadFunc()
     }
     
     std::vector<byte> input(serialInputBufferSize);
-    m_serialConnection.readByteArray(m_currentPort, input);
-    printToConsole(input);
-    input.resize(serialInputBufferSize);
+    auto rxd = m_serialConnection.readByteArray(m_currentPort, input);
+    if (rxd > 0)
+    {
+        printToConsole(input);
+        input.resize(serialInputBufferSize);
+    }
 
     std::vector<byte> send = { '$', '\r', '\n', '\0' }; //queries grbl for current settings
     m_serialConnection.sendByteArray(m_currentPort, send);
@@ -217,7 +224,7 @@ void MainWindow::serialThreadFunc()
     //poll for input from serial port
     while (m_runSerialThread)
     {
-        auto rxd = m_serialConnection.readByteArray(m_currentPort, input);
+        rxd = m_serialConnection.readByteArray(m_currentPort, input);
         if (rxd > 0)
         {
             printToConsole(input);

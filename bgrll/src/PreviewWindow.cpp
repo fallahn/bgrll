@@ -37,6 +37,7 @@ void PreviewWindow::start(const nana::nested_form& parent)
 {
     sf::RenderWindow rw;
     rw.create((sf::WindowHandle)parent.native_handle());
+    rw.setFramerateLimit(60);
 
     sf::Clock frameClock;
     const float timePerFrame = 1.f / 60.f;
@@ -83,7 +84,7 @@ void PreviewWindow::update(float dt)
 
 void PreviewWindow::draw(sf::RenderWindow& rw)
 {
-    rw.clear(sf::Color::Red);
+    rw.clear();
 
 
     rw.display();
