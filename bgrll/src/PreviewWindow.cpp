@@ -36,7 +36,8 @@ PreviewWindow::PreviewWindow()
 void PreviewWindow::start(const nana::nested_form& parent)
 {
     sf::RenderWindow rw;
-    rw.create((sf::WindowHandle)parent.native_handle());
+    auto handle = parent.native_handle();
+    rw.create((sf::WindowHandle)handle);
     rw.setFramerateLimit(60);
 
     sf::Clock frameClock;
@@ -59,7 +60,7 @@ void PreviewWindow::start(const nana::nested_form& parent)
         draw(rw);
     }
 
-    rw.close();
+    //rw.close();
 }
 
 void PreviewWindow::end()

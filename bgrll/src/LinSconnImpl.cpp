@@ -27,6 +27,13 @@ source distribution.
 #include <cassert>
 #include <cstring>
 
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+
+#include <linux/serial.h>
+#include <dirent.h>
+
 namespace
 {
     const char comPorts[30][16] =
@@ -39,6 +46,66 @@ namespace
         "/dev/rfcomm0","/dev/rfcomm1","/dev/ircomm0","/dev/ircomm1"
     };
     const std::size_t MAX_ARRAY_SIZE = 4096;
+
+    std::string getDriver(const std::string& tty)
+    {
+        struct stat st;
+        std::string devDir = tty;
+        devDir += "/device";
+
+        if(lstat(devDir.c_str(), &st) == 0 && S_ISLNK(st.st_mode))
+        {
+            devDir += "/driver";
+            std::array<char, 1024> buffer;
+            std::memset(buffer.data(), 0, buffer.size());
+            if(readlink(devDir.c_str(), buffer.data(), buffer.size()) > 0)
+            {
+                return basename(buffer.data());
+            }
+        }
+        return std::string();
+    }
+
+    void registerComPort(std::vector<std::string>& comList, std::vector<std::string>& comList8250, const std::string& dir)
+    {
+        auto driver = getDriver(dir);
+
+        if(!driver.empty())
+        {
+            std::string devFile = std::string("/dev/") + basename(dir.c_str());
+
+            if(driver == "serial8250")
+            {
+                comList8250.push_back(devFile);
+            }
+            else
+            {
+                comList.push_back(devFile);
+            }
+        }
+    }
+
+    void probe8250ComPorts(std::vector<std::string>& comList, const std::vector<std::string>& comList8250)
+    {
+        struct serial_struct serialInf;
+
+        for(const auto& dev : comList8250)
+        {
+            int fd = open(dev.c_str(), O_RDWR | O_NONBLOCK | O_NOCTTY);
+
+            if(fd >= 0)
+            {
+                if(ioctl(fd, TIOCGSERIAL, &serialInf) == 0)
+                {
+                    if(serialInf.type != PORT_UNKNOWN)
+                    {
+                        comList.push_back(dev);
+                    }
+                }
+                close(fd);
+            }
+        }
+    }
 }
 
 SerialConnection::LinSconnImpl::LinSconnImpl()
@@ -270,9 +337,34 @@ std::size_t SerialConnection::LinSconnImpl::sendByteArray(std::uint16_t port, co
 //linux version of static function
 std::vector<std::string> SerialConnection::SconnImpl::getAvailablePorts()
 {
-    //TODO check /dev/serial/ exists, and if it does list contents
+    struct dirent** namelist = nullptr;
+    std::vector<std::string> comList;
+    std::vector<std::string> comList8250;
+    const char* sysdir = "/sys/class/tty/";
 
-    return{};
+    int dirCount = scandir(sysdir, &namelist, nullptr, nullptr);
+    if(dirCount < 0)
+    {
+        perror("scanning port directory");
+    }
+    else
+    {
+        while(dirCount--)
+        {
+            if(std::strcmp(namelist[dirCount]->d_name, "..")
+                && std::strcmp(namelist[dirCount]->d_name, "."))
+            {
+                std::string devdir = sysdir;
+                devdir += namelist[dirCount]->d_name;
+                registerComPort(comList, comList8250, devdir);
+            }
+            free(namelist[dirCount]);
+        }
+        free(namelist);
+    }
+
+    probe8250ComPorts(comList, comList8250);
+    return comList;
 }
 
 #endif //__LINUX__
