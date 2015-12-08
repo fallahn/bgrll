@@ -22,6 +22,8 @@ source distribution.
 #include <MainWindow.hpp>
 #include <Util.hpp>
 
+#include <nana/gui/filebox.hpp>
+
 #include <iostream>
 #include <cstring>
 
@@ -44,18 +46,18 @@ MainWindow::MainWindow()
     m_previewWindowForm.show();
 
     //launch SFML in own thread
+#ifdef _WIN32 //sfml appears to be borked on linux for now
     auto previewThread = nana::threads::pool_push(m_threadPool, [this]()
     {
         m_previewWindow.start(m_previewWindowForm);
     });
     previewThread();
+#endif
 }
 
 MainWindow::~MainWindow()
 {
-#ifndef NDEBUG
     std::cerr << "Finishing up remaining threads..." << std::endl;
-#endif //NDEBUG
 
     m_runSerialThread = false;
     m_previewWindow.end();
@@ -71,8 +73,18 @@ void MainWindow::buildMenuBar()
 {
     m_menuBar.create(*this);
     auto& fileMenu = m_menuBar.push_back(STR("File"));
-    fileMenu.append(STR("Open .nc File"), [this](nana::menu::item_proxy&) {});
-    fileMenu.append(STR("Close File"), [this](nana::menu::item_proxy&) {});
+    fileMenu.append(STR("Open .nc File"), [this](nana::menu::item_proxy&) 
+    {
+        nana::filebox fb(true);
+        fb.add_filter(STR("NC Files"), STR("*.txt;*.nc"));
+
+        if (fb())
+        {
+            m_gcode.open(STRD(fb.file()));
+            m_serialOutputTextBox.append(STRU(m_gcode.getMessages()), true);
+        }
+    });
+    fileMenu.append(STR("Close File"), [this](nana::menu::item_proxy&) { m_gcode.close(); });
     fileMenu.append(STR("Exit"), [this](nana::menu::item_proxy&) { close(); });
 
     auto& toolsMenu = m_menuBar.push_back(STR("Tools"));
@@ -161,7 +173,7 @@ void MainWindow::buildComInterface()
             m_serialInputTextBox.getline(0, text);
 
             if (text.empty()) return;
-            text += L"\r\n";
+            text += L"\n";
 
             std::string ntext = STRD(text);
             std::vector<byte> data(ntext.size());
@@ -216,7 +228,7 @@ void MainWindow::serialThreadFunc()
         input.resize(serialInputBufferSize);
     }
 
-    std::vector<byte> send = { '$', '\r', '\n', '\0' }; //queries grbl for current settings
+    std::vector<byte> send = { '$', '\n', '\0' }; //queries grbl for current settings
     m_serialConnection.sendByteArray(m_currentPort, send);
     printToConsole(send);
 
@@ -229,7 +241,7 @@ void MainWindow::serialThreadFunc()
             printToConsole(input);
             input.resize(serialInputBufferSize);
         }
-        SLEEP(500);
+        //SLEEP(500);
     }
 
     m_serialConnection.closePort(m_currentPort);

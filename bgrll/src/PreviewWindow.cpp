@@ -60,7 +60,7 @@ void PreviewWindow::start(const nana::nested_form& parent)
         draw(rw);
     }
 
-    //rw.close();
+    rw.close();
 }
 
 void PreviewWindow::end()
