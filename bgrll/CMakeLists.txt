@@ -1,5 +1,5 @@
 project(bgrll)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
 
 if(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build (Debug or Release)" FORCE)
@@ -31,6 +31,14 @@ endif()
 find_package(SFML 2 REQUIRED graphics window system)
 find_package(Nana REQUIRED)
 
+#require boost for string conversion if codecvt not implemented
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS "1800")
+  SET(Boost_USE_STATIC_LIBS OFF) 
+  SET(Boost_USE_MULTITHREADED ON)  
+  SET(Boost_USE_STATIC_RUNTIME OFF) 
+  find_package(Boost REQUIRED)
+endif()
+
 if(UNIX)
   find_package(X11 REQUIRED)
   find_package(Threads REQUIRED)
@@ -45,6 +53,10 @@ include_directories(
 
 if(X11_FOUND)
   include_directories(${X11_INCLUDE_DIRS})
+endif()
+
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS "1800")
+  include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
 #if using mingw on windows compile the icon / resource files
@@ -72,6 +84,10 @@ target_link_libraries(bgrll
   ${SFML_LIBRARIES}
   ${NANA_LIBRARIES}
   ${SFML_DEPENDENCIES})
+
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS "1800")
+  target_link_libraries(bgrll ${Boost_LIBRARIES})
+endif()
 
 if(UNIX)
   target_link_libraries(bgrll

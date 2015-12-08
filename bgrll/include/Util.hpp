@@ -29,7 +29,7 @@ source distribution.
 #if (_MSC_VER >= 1800)
 #include <codecvt>
 #else
-//#include <boost/locale/encoding_utf.hpp>
+#include <boost/locale/encoding_utf.hpp>
 #endif //_MSC_VER
 #include <string>
 #include <cassert>
@@ -63,17 +63,17 @@ namespace Util
             return converter.to_bytes(str);
         }
 #else //codecvt probably not supported
-        //using boost::locale::conv::utf_to_utf;
+        using boost::locale::conv::utf_to_utf;
         static inline std::wstring toWideString(const std::string& str)
         {
-            return std::wstring();
-            //return utf_to_utf<wchar_t>(str.c_str(), str.c_str() + str.size());
+            //return std::wstring();
+            return utf_to_utf<wchar_t>(str.c_str(), str.c_str() + str.size());
         }
 
         static inline std::string toNarrowString(const std::wstring& str)
         {
-            return std::string();
-            //return utf_to_utf<char>(str.c_str(), str.c_str() + str.size());
+            //return std::string();
+            return utf_to_utf<char>(str.c_str(), str.c_str() + str.size());
         }
 #endif //_MSC_VER
 

@@ -21,6 +21,8 @@ source distribution.
 
 #include <MainWindow.hpp>
 
+#include <SFML/Graphics/RenderWindow.hpp>
+
 int main()
 {
     MainWindow mw;
