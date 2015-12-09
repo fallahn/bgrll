@@ -39,7 +39,8 @@ public:
     void open(const std::string& path);
     void close();
 
-    void update(SerialConnection&);
+    void start(SerialConnection&, std::uint16_t);
+    bool update(SerialConnection&, std::uint16_t);
 
     const std::string& getMessages() const;
 
@@ -47,6 +48,7 @@ private:
 
     std::uint16_t m_front;
     std::uint16_t m_back;
+    std::uint8_t m_sentBufferSize;
     std::string m_messages;
 
     std::vector<std::string> m_lines;

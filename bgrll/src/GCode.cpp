@@ -28,11 +28,20 @@ source distribution.
 namespace 
 {
     const std::uint8_t GRBL_MAX_BUFFER = 128u;
+    const std::uint8_t GRBL_MAX_LINE_LENGTH = 70u;
+
+    std::vector<byte> toDataArray(const std::string& str)
+    {
+        std::vector<byte> data(str.size());
+        std::memcpy(data.data(), str.data(), str.size());
+        return std::move(data);
+    }
 }
 
 GCode::GCode()
-    : m_front   (0u),
-    m_back      (0u)
+    : m_front           (0u),
+    m_back              (0u),
+    m_sentBufferSize    (0u)
 {
 
 }
@@ -69,9 +78,34 @@ void GCode::close()
     m_back = 0u;
 }
 
-void GCode::update(SerialConnection& connection)
+void GCode::start(SerialConnection& connection, std::uint16_t port)
 {
+    if (!(m_front == 0 && m_back == 0)) return;
 
+    //send as much as we can to fill the buffer
+    do
+    {
+        m_sentBufferSize += connection.sendByteArray(port, toDataArray(m_lines[m_back++]));
+    } while (m_sentBufferSize < GRBL_MAX_BUFFER && m_back < m_lines.size());
+
+}
+
+bool GCode::update(SerialConnection& connection, std::uint16_t port)
+{
+    m_sentBufferSize -= m_lines[m_front++].size();
+    if (GRBL_MAX_BUFFER - m_sentBufferSize > m_lines[m_back].size())
+    {
+        if (m_back < m_lines.size())
+        {
+            m_sentBufferSize += connection.sendByteArray(port, toDataArray(m_lines[m_back++]));
+        }
+        else
+        {
+            //return here to say we sent everything
+            return true;
+        }
+    }
+    return false;
 }
 
 const std::string& GCode::getMessages() const
@@ -82,6 +116,19 @@ const std::string& GCode::getMessages() const
 //private
 void GCode::validate()
 {
-    //remove comments
-    //warn on lines which are too long
+    //remove comments / invalid lines
+    m_lines.erase(std::remove_if(m_lines.begin(), m_lines.end(), [](const std::string& str)
+    {
+        return (str[0] != 'N' && str[0] != 'G' && str[0] != 'M');
+    }), m_lines.end());
+
+    //validate lengths
+    for (auto i = 0u; i < m_lines.size(); ++i)
+    {
+        m_lines[i] += "\n";
+        if (m_lines[i].size() >= GRBL_MAX_LINE_LENGTH)
+        {
+            m_messages += "WARNING: line " + std::to_string(i) + " exceeds GRBL max line length\n";
+        }
+    }
 }
