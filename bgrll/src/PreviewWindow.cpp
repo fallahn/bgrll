@@ -40,6 +40,8 @@ void PreviewWindow::start(const nana::nested_form& parent)
     rw.create((sf::WindowHandle)handle);
     rw.setFramerateLimit(60);
 
+    m_idleAnimation = std::make_unique<IdleAnimation>(sf::FloatRect(sf::Vector2f(), rw.getView().getSize()));
+
     sf::Clock frameClock;
     const float timePerFrame = 1.f / 60.f;
     float timeSinceLastUpdate = 0.f;
@@ -80,13 +82,14 @@ void PreviewWindow::handleEvents(sf::RenderWindow& rw)
 
 void PreviewWindow::update(float dt)
 {
-
+    m_idleAnimation->update(dt);
 }
 
 void PreviewWindow::draw(sf::RenderWindow& rw)
 {
     rw.clear();
 
+    rw.draw(*m_idleAnimation);
 
     rw.display();
 }

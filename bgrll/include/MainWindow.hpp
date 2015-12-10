@@ -63,8 +63,14 @@ private:
     nana::nested_form m_previewWindowForm;
     PreviewWindow m_previewWindow;
 
+    nana::button m_startButton;
+    nana::button m_pauseButton;
+    nana::button m_rewindButton;
+    std::atomic_bool m_sendCode;
+
     void buildMenuBar();
     void buildComInterface(); //command line input and output window from RS232
+    void buildTransport();
     
     std::atomic_bool m_runSerialThread;
     std::atomic_short m_currentPort;

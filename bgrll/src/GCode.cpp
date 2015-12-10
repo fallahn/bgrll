@@ -21,9 +21,12 @@ source distribution.
 
 #include <GCode.hpp>
 #include <SerialConn.hpp>
+#include <Util.hpp>
 
 #include <iostream>
 #include <fstream>
+
+#include <nana/gui/widgets/textbox.hpp>
 
 namespace 
 {
@@ -38,8 +41,9 @@ namespace
     }
 }
 
-GCode::GCode()
-    : m_front           (0u),
+GCode::GCode(nana::textbox& tb)
+    : m_textbox         (tb),
+    m_front             (0u),
     m_back              (0u),
     m_sentBufferSize    (0u)
 {
@@ -74,20 +78,20 @@ void GCode::close()
 {
     m_messages.clear();
     m_lines.clear();
-    m_front = 0u;
-    m_back = 0u;
+    reset();
 }
 
-void GCode::start(SerialConnection& connection, std::uint16_t port)
+bool GCode::start(SerialConnection& connection, std::uint16_t port)
 {
-    if (!(m_front == 0 && m_back == 0)) return;
+    if (!(m_front == 0 && m_back == 0) || m_lines.empty()) return false;
 
     //send as much as we can to fill the buffer
     do
     {
+        m_textbox.append(STRU(m_lines[m_back]), true);
         m_sentBufferSize += connection.sendByteArray(port, toDataArray(m_lines[m_back++]));
     } while (m_sentBufferSize < GRBL_MAX_BUFFER && m_back < m_lines.size());
-
+    return true;
 }
 
 bool GCode::update(SerialConnection& connection, std::uint16_t port)
@@ -97,6 +101,7 @@ bool GCode::update(SerialConnection& connection, std::uint16_t port)
     {
         if (m_back < m_lines.size())
         {
+            m_textbox.append(STRU(m_lines[m_back]), true);
             m_sentBufferSize += connection.sendByteArray(port, toDataArray(m_lines[m_back++]));
         }
         else
@@ -106,6 +111,13 @@ bool GCode::update(SerialConnection& connection, std::uint16_t port)
         }
     }
     return false;
+}
+
+void GCode::reset()
+{
+    m_front = 0u;
+    m_back = 0u;
+    m_sentBufferSize = 0u;
 }
 
 const std::string& GCode::getMessages() const

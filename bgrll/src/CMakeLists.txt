@@ -1,4 +1,5 @@
 set(bgrll_SRC
+  ${bgrll_DIR}/IdleAnimation.cpp
   ${bgrll_DIR}/LinSconnImpl.cpp
   ${bgrll_DIR}/GCode.cpp
   ${bgrll_DIR}/main.cpp

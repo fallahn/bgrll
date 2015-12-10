@@ -27,11 +27,16 @@ source distribution.
 #include <string>
 #include <vector>
 
+namespace nana
+{
+    class textbox;
+}
+
 class SerialConnection;
 class GCode final
 {
 public:
-    GCode();
+    explicit GCode(nana::textbox&);
     ~GCode() = default;
     GCode(const GCode&) = delete;
     const GCode& operator = (const GCode&) = delete;
@@ -39,12 +44,14 @@ public:
     void open(const std::string& path);
     void close();
 
-    void start(SerialConnection&, std::uint16_t);
+    bool start(SerialConnection&, std::uint16_t);
     bool update(SerialConnection&, std::uint16_t);
+    void reset();
 
     const std::string& getMessages() const;
 
 private:
+    nana::textbox& m_textbox;
 
     std::uint16_t m_front;
     std::uint16_t m_back;

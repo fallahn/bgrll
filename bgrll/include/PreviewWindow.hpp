@@ -24,7 +24,10 @@ source distribution.
 #ifndef PREVIEW_WINDOW_HPP_
 #define PREVIEW_WINDOW_HPP_
 
+#include <IdleAnimation.hpp>
+
 #include <atomic>
+#include <memory>
 
 namespace nana
 {
@@ -47,6 +50,8 @@ public:
 private:
 
     std::atomic_bool m_running;
+
+    std::unique_ptr<IdleAnimation> m_idleAnimation;
 
     void handleEvents(sf::RenderWindow&);
     void update(float);

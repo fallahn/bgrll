@@ -35,12 +35,15 @@ namespace
 
 MainWindow::MainWindow()
     : nana::form        (nana::API::make_center(1024, 768), nana::appear::decorate<nana::appear::taskbar>()),
+    m_gcode             (m_serialOutputTextBox),
     m_previewWindowForm (*this, { 10, 26, 504, 470 }, {false, false, false, false, false, false, false}),
     m_runSerialThread   (false),
-    m_currentPort       (noPort)
+    m_currentPort       (noPort),
+    m_sendCode          (false)
 {
     buildMenuBar();
     buildComInterface();
+    buildTransport();
 
     m_previewWindowForm.bgcolor({ 0, 0, 0 });
     m_previewWindowForm.show();
@@ -59,6 +62,7 @@ MainWindow::~MainWindow()
 {
     std::cerr << "Finishing up remaining threads..." << std::endl;
 
+    m_sendCode = false;
     m_runSerialThread = false;
     m_previewWindow.end();
     m_threadPool.wait_for_finished();
@@ -195,7 +199,35 @@ void MainWindow::buildComInterface()
     m_serialOutputTextBox.multi_lines(true);
     m_serialOutputTextBox.line_wrapped(false);
     m_serialOutputTextBox.editable(false);
-    m_serialOutputTextBox.append(L"Disconnected...\n", true);
+    m_serialOutputTextBox.append(STR("Disconnected...\n"), true);
+}
+
+void MainWindow::buildTransport()
+{
+    m_startButton.create(*this, nana::rectangle(526, 506, 50, 20));
+    m_startButton.caption(STR("Start"));
+    m_startButton.events().click([this]()
+    {
+        //TODO check if we're resuming from pause
+        if (m_currentPort != noPort)
+        {
+            m_sendCode = m_gcode.start(m_serialConnection, m_currentPort);
+        }
+    });
+
+    m_pauseButton.create(*this, nana::rectangle(586, 506, 50, 20));
+    m_pauseButton.caption(STR("Pause"));
+    m_pauseButton.events().click([this]() 
+    {
+        m_sendCode = false;
+    });
+
+    m_rewindButton.create(*this, nana::rectangle(646, 506, 50, 20));
+    m_rewindButton.caption(STR("Rewind"));
+    m_rewindButton.events().click([this]()
+    {
+        m_gcode.reset();
+    });
 }
 
 void MainWindow::serialThreadFunc()
@@ -238,6 +270,10 @@ void MainWindow::serialThreadFunc()
         rxd = m_serialConnection.readByteArray(m_currentPort, input);
         if (rxd > 0)
         {
+            if (m_sendCode && input[0] == 'o' && input[1] == 'k')
+            {
+                m_sendCode = !m_gcode.update(m_serialConnection, m_currentPort);
+            }
             printToConsole(input);
             input.resize(serialInputBufferSize);
         }
