@@ -51,9 +51,8 @@ private:
         bool dead() const;
 
     private:
-
-        sf::Color m_colour;
         float m_lifetime;
+        sf::Color m_colour;
         std::vector<sf::Vertex> m_vertices;
 
         void draw(sf::RenderTarget&, sf::RenderStates) const override;
@@ -66,9 +65,9 @@ private:
         sf::Vector2f velocity;
     };
     EndPoint m_start, m_end;
-    
+
     sf::FloatRect m_bounds;
-    
+
     void updatePoint(EndPoint&, float);
     void draw(sf::RenderTarget&, sf::RenderStates) const override;
 };

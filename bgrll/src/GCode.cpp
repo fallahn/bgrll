@@ -25,10 +25,12 @@ source distribution.
 
 #include <iostream>
 #include <fstream>
+#include <cstring>
+#include <algorithm>
 
 #include <nana/gui/widgets/textbox.hpp>
 
-namespace 
+namespace
 {
     const std::uint8_t GRBL_MAX_BUFFER = 128u;
     const std::uint8_t GRBL_MAX_LINE_LENGTH = 70u;

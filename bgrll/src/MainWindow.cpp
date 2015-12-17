@@ -37,9 +37,9 @@ MainWindow::MainWindow()
     : nana::form        (nana::API::make_center(1024, 768), nana::appear::decorate<nana::appear::taskbar>()),
     m_gcode             (m_serialOutputTextBox),
     m_previewWindowForm (*this, { 10, 26, 504, 470 }, {false, false, false, false, false, false, false}),
+    m_sendCode          (false),
     m_runSerialThread   (false),
-    m_currentPort       (noPort),
-    m_sendCode          (false)
+    m_currentPort       (noPort)
 {
     buildMenuBar();
     buildComInterface();
@@ -77,7 +77,7 @@ void MainWindow::buildMenuBar()
 {
     m_menuBar.create(*this);
     auto& fileMenu = m_menuBar.push_back(STR("File"));
-    fileMenu.append(STR("Open .nc File"), [this](nana::menu::item_proxy&) 
+    fileMenu.append(STR("Open .nc File"), [this](nana::menu::item_proxy&)
     {
         nana::filebox fb(true);
         fb.add_filter(STR("NC Files"), STR("*.txt;*.nc"));
@@ -217,7 +217,7 @@ void MainWindow::buildTransport()
 
     m_pauseButton.create(*this, nana::rectangle(586, 506, 50, 20));
     m_pauseButton.caption(STR("Pause"));
-    m_pauseButton.events().click([this]() 
+    m_pauseButton.events().click([this]()
     {
         m_sendCode = false;
     });
